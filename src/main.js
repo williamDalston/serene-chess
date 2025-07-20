@@ -108,7 +108,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const trainingModeToggle = document.getElementById('training-mode-toggle');
     const soundToggle = document.getElementById('sound-toggle');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
-    const engineControls = document.querySelectorAll('.panel-section:not(:last-child)');
+   // REPLACE the old engineControls line with this one
+    const engineControls = [
+        document.querySelector('[data-preset="defender"]')?.closest('.panel-section'),
+        document.getElementById('elo-slider')?.closest('.panel-section')
+    ].filter(Boolean); // This creates an array of the two engine panels
     const connectionIndicatorEl = document.getElementById('engine-indicator'); 
     const connectionStatusTextEl = document.getElementById('engine-status');
     const thinkingIndicator = document.getElementById('thinking-indicator');
@@ -824,6 +828,7 @@ trainingModeToggle.addEventListener('change', (e) => {
     darkModeToggle.addEventListener('change', (e) => { 
         document.body.classList.toggle('dark-mode', e.target.checked); 
         saveSettings(); // Add this line
+        updateApplicationState();
     });
 
 // REPLACE the old "Force Toggle" block with this one
