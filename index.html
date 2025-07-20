@@ -1217,23 +1217,41 @@
   display: flex;
 }
 
-.settings-modal {
-  background: var(--surface);
-  box-shadow: var(--shadow-elevated);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  width: min(90vw,400px);
-  max-height: 80vh;
-  overflow-y: auto;
-  transform: scale(0.9);
-  opacity: 0;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+.settings-modal{
+  /* size & appearance */
+  background:var(--surface);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-elevated);
+  padding:var(--space-lg);
+  width:min(90vw,400px);       /* 400 px on desktop, 90 vw on phones */
+  max-height:80vh;
+  overflow-y:auto;
+  
+  /* entrance animation */
+  opacity:0;
+  transform:scale(.9);
+  transition:opacity .25s ease, transform .25s ease;
+
+  /* while hidden it shouldn’t block clicks */
+  pointer-events:none;
 }
-.settings-backdrop.visible .settings-modal {
-  transform: scale(1);
-  opacity: 1;
+.settings-backdrop{
+  position:fixed;
+  inset:0;
+  display:none;                /* shown only when .visible is added */
+  align-items:center;          /* flex‑box centering */
+  justify-content:center;
+  background:rgba(26,25,21,.7);
+  backdrop-filter:blur(4px);
+  z-index:999;
 }
 
+/* When backdrop is visible → modal fades / scales in */
+.settings-backdrop.visible .settings-modal{
+  opacity:1;
+  transform:scale(1);
+  pointer-events:auto;
+}
 
 /* Optional tweak for very large screens */
 @media (min-width: 1200px) {
