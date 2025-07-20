@@ -9,10 +9,22 @@ window.SereneChessLoaded = true;
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- SVG Piece Mapping ---
+
     const SVG_PIECES = {
-      p: 'pieces/bP.svg', r: 'pieces/bR.svg', n: 'pieces/bN.svg', b: 'pieces/bB.svg', q: 'pieces/bQ.svg', k: 'pieces/bK.svg',
-      P: 'pieces/wP.svg', R: 'pieces/wR.svg', N: 'pieces/wN.svg', B: 'pieces/wB.svg', Q: 'pieces/wQ.svg', K: 'pieces/wK.svg'
-    };
+  p: '/pieces/bP.svg',
+  r: '/pieces/bR.svg',
+  n: '/pieces/bN.svg',
+  b: '/pieces/bB.svg',
+  q: '/pieces/bQ.svg',
+  k: '/pieces/bK.svg',
+  P: '/pieces/wP.svg',
+  R: '/pieces/wR.svg',
+  N: '/pieces/wN.svg',
+  B: '/pieces/wB.svg',
+  Q: '/pieces/wQ.svg',
+  K: '/pieces/wK.svg'
+};
+
     const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 
     // --- Engine Preset Configurations ---
