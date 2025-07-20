@@ -1,0 +1,233 @@
+<!-- index.html — full, unabridged version -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess — A Calm Place to Think</title>
+
+  <!-- Tailwind CSS (compiled) -->
+  <link href="dist/output.css" rel="stylesheet" />
+
+  <!-- Chessboard.js CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
+
+  <!-- Inter font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    body { background: #f4e3d7; font-family: 'Inter', sans-serif; color: #2e2e2e; }
+    .chessboard-container { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border-radius: 12px; overflow: hidden; position: relative; opacity: 0; transition: opacity 0.5s; }
+    .chessboard-container.loaded { opacity: 1; }
+    #board .white-1e1d7 { background-color: #f0d9b5; transition: background 0.2s; }
+    #board .black-3c85d { background-color: #b58863; transition: background 0.2s; }
+    .highlight-last-move { box-shadow: inset 0 0 15px 5px rgba(255,255,0,0.4) !important; }
+    .control-panel, .history-panel { background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.4); border-radius: 12px; box-shadow: 0 8px 32px rgba(31,38,135,0.1); }
+    .btn-control { background: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.6); border-radius: 10px; padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 500; color: #2e2e2e; transition: transform 0.2s, background 0.2s; }
+    .btn-control:hover:not(:disabled) { background: rgba(255,255,255,0.8); transform: translateY(-2px); }
+    .btn-control:focus { outline: 2px solid #b58863; }
+    .btn-control:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-personality { background: transparent; border: 1px solid #b58863; color: #b58863; }
+    .btn-personality.active { background: #b58863; color: #f4e3d7; font-weight: 600; }
+    #move-history, #move-history-m { height: 400px; overflow-y: auto; scroll-behavior: smooth; font-family: monospace; }
+    .history-panel .grid:nth-child(even) { background: rgba(255,255,255,0.2); }
+    .status-text { color: #5c4033; min-height: 1.75rem; padding: 0.5rem; }
+    .loading-overlay { position: absolute; inset: 0; background: rgba(244,227,215,0.8); display: flex; align-items: center; justify-content: center; z-index: 10; border-radius: 12px; }
+    .spinner { border: 4px solid rgba(0,0,0,0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #5c4033; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body class="flex flex-col md:flex-row items-start justify-center min-h-screen p-4 gap-8">
+  <!-- Mobile panels -->
+  <div class="md:hidden w-full space-y-4">
+    <details open>
+      <summary class="btn-control w-full text-left" title="Toggle controls">⚙ Controls</summary>
+      <div class="control-panel p-4 mt-2 space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <button id="new-game-btn-m" class="btn-control col-span-2" aria-label="New Game" title="Start a new game">↺ New Game</button>
+          <button id="undo-btn-m" class="btn-control" aria-label="Undo Move" title="Undo last move">↶ Undo</button>
+          <button id="switch-side-btn-m" class="btn-control" aria-label="Switch Side" title="Play as the other color">⇄ Switch</button>
+        </div>
+        <div class="space-y-3">
+          <button class="btn-control btn-personality" data-personality="balanced" title="Balanced playstyle">⚖️ Balanced</button>
+          <button class="btn-control btn-personality" data-personality="aggressive" title="Aggressive playstyle">🥊 Aggressive</button>
+          <button class="btn-control btn-personality" data-personality="defensive" title="Defensive playstyle">🛡️ Defensive</button>
+        </div>
+        <button id="force-move-btn-m" class="btn-control w-full" aria-label="Force AI Move" title="Let AI move now">⏱️ Move Now</button>
+      </div>
+    </details>
+    <details>
+      <summary class="btn-control w-full text-left" title="Toggle move history">📜 Move History</summary>
+      <div class="history-panel p-4 mt-2">
+        <div id="move-history-m"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Desktop side panels -->
+  <div class="hidden md:flex md:flex-col md:w-64 space-y-6">
+    <div class="control-panel p-6 space-y-6">
+      <h2 class="text-xl font-semibold text-center text-[#5c4033]">Controls</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <button id="new-game-btn" class="btn-control col-span-2" aria-label="New Game" title="Start a new game">↺ New Game</button>
+        <button id="undo-btn" class="btn-control" aria-label="Undo Move" title="Undo last move">↶ Undo</button>
+        <button id="switch-side-btn" class="btn-control" aria-label="Switch Side" title="Play as the other color">⇄ Switch</button>
+      </div>
+      <h2 class="text-xl font-semibold text-center text-[#5c4033]">AI Personality</h2>
+      <div class="flex flex-col space-y-3">
+        <button class="btn-control btn-personality" data-personality="balanced" title="Balanced playstyle">⚖️ Balanced</button>
+        <button class="btn-control btn-personality" data-personality="aggressive" title="Aggressive playstyle">🥊 Aggressive</button>
+        <button class="btn-control btn-personality" data-personality="defensive" title="Defensive playstyle">🛡️ Defensive</button>
+      </div>
+      <button id="force-move-btn" class="btn-control w-full" aria-label="Force AI Move" title="Let AI move now">⏱️ Move Now</button>
+    </div>
+    <div class="history-panel p-6">
+      <h2 class="text-xl font-semibold text-center text-[#5c4033]">Move History</h2>
+      <div id="move-history"></div>
+    </div>
+  </div>
+
+  <!-- Board -->
+  <div class="flex-1 max-w-2xl w-full mx-auto">
+    <div id="board-container" class="chessboard-container w-full">
+      <div id="board"></div>
+      <div id="loading-overlay" class="loading-overlay"><div class="spinner" role="status"></div></div>
+    </div>
+    <div id="status" class="status-text text-center text-lg mt-4 font-medium">Initializing Engine…</div>
+  </div>
+
+  <!-- Dependencies (order is critical) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+  <!-- Main Script -->
+  <script>
+  (() => {
+    'use strict';
+    const MOVE_TIME = 3000, MAX_SKILL = 20;
+    let game, board, engine, engineReady = false, playerColor = 'w';
+    const sel = {
+      newGame: document.querySelectorAll('#new-game-btn, #new-game-btn-m'),
+      undo: document.querySelectorAll('#undo-btn, #undo-btn-m'),
+      swap: document.querySelectorAll('#switch-side-btn, #switch-side-btn-m'),
+      force: document.querySelectorAll('#force-move-btn, #force-move-btn-m'),
+      pers: document.querySelectorAll('.btn-personality'),
+      history: document.querySelectorAll('#move-history, #move-history-m'),
+      status: document.getElementById('status'),
+      overlay: document.getElementById('loading-overlay'),
+      boardContainer: document.getElementById('board-container')
+    };
+
+    const toggleOverlay = show => sel.overlay.style.display = show ? 'flex' : 'none';
+    const setStatus = txt => sel.status.textContent = txt;
+
+    function initGame() { game = new Chess(); updateUI(); }
+    function initBoard() {
+      board = Chessboard('board', {
+        draggable: true,
+        position: 'start',
+        pieceTheme: p => `https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/${p}.png`,
+        onDragStart, onDrop, onSnapEnd
+      });
+      window.addEventListener('resize', () => board.resize());
+      sel.boardContainer.classList.add('loaded');
+    }
+
+    function initEngine() {
+      [...sel.undo, ...sel.swap, ...sel.force, ...sel.pers].forEach(b => b.disabled = true);
+      setStatus('Loading AI Engine…'); toggleOverlay(true);
+      try {
+        engine = new Worker(new URL('./engine/stockfish-nnue-17-lite.js', import.meta.url), { type: 'module' });
+        engine.onmessage = handleEngine;
+        engine.onerror = e => { console.error(e); setStatus('Error loading engine'); toggleOverlay(false); };
+        engine.postMessage('uci');
+      } catch (e) { console.error(e); setStatus('Engine init failed'); toggleOverlay(false); }
+    }
+
+    function handleEngine({ data }) {
+      if (data === 'uciok') engine.postMessage('isready');
+      else if (data === 'readyok') {
+        engineReady = true;
+        [...sel.newGame, ...sel.undo, ...sel.swap, ...sel.force, ...sel.pers].forEach(b => b.disabled = false);
+        sel.undo.forEach(b => b.disabled = true);
+        toggleOverlay(false);
+        setupPersonality('balanced', true);
+        setStatus('Engine ready. White to move.');
+      }
+      else if (data.startsWith('bestmove')) {
+        const mv = data.split(' ')[1];
+        if (mv && mv !== '(none)') {
+          const m = game.move({ from: mv.slice(0,2), to: mv.slice(2,4), promotion: 'q' });
+          if (m) postMove(m);
+        }
+      }
+    }
+
+    function onDragStart(src, piece) {
+      return engineReady && !game.game_over() && game.turn() === piece[0] && game.turn() === playerColor;
+    }
+    function onDrop(src, dst) {
+      document.querySelectorAll('#board .highlight-last-move').forEach(el => el.classList.remove('highlight-last-move'));
+      const m = game.move({ from: src, to: dst, promotion: 'q' });
+      if (!m) return 'snapback'; postMove(m);
+      setTimeout(requestAIMove, 250);
+    }
+    function onSnapEnd() { board.position(game.fen()); }
+
+    function requestAIMove() {
+      if (engineReady && !game.game_over() && game.turn() !== playerColor) {
+        setStatus('AI is thinking…');
+        engine.postMessage(`position fen ${game.fen()}`);
+        engine.postMessage(`go movetime ${MOVE_TIME}`);
+      }
+    }
+    function postMove(move) {
+      board.position(game.fen()); updateUI(); highlightLast(); }
+
+    function updateUI() { updateStatus(); updateHistory(); }
+    function updateStatus() {
+      let txt;
+      const turn = game.turn() === 'w' ? 'White' : 'Black';
+      if (game.in_checkmate()) txt = `Game over, ${turn} is checkmate.`;
+      else if (game.in_draw()) txt = 'Game over, drawn.';
+      else { txt = `${turn} to move.`; if (game.in_check()) txt += ` ${turn} is in check.`; }
+      setStatus(txt);
+      sel.undo.forEach(b => b.disabled = game.history().length < 2);
+    }
+    function updateHistory() {
+      sel.history.forEach(el => {
+        const h = game.history(); let html = '';
+        for (let i=0; i<h.length; i+=2) html += `<div class="grid grid-cols-3 gap-2 p-1"><span class="text-right">${i/2+1}.</span><span class="text-center">${h[i]||''}</span><span class="text-left">${h[i+1]||''}</span></div>`;
+        el.innerHTML = html; el.scrollTop = el.scrollHeight;
+      });
+    }
+    function highlightLast() {
+      const h = game.history({ verbose:true }); if (!h.length) return;
+      const l = h[h.length-1]; ['from','to'].forEach(k => {
+        document.querySelector(`#board .square-${l[k]}`).classList.add('highlight-last-move');
+      });
+    }
+    function setupPersonality(p, init=false) {
+      if (!engineReady) return;
+      if (!init) engine.postMessage('ucinewgame');
+      engine.postMessage(`setoption name Skill Level value ${MAX_SKILL}`);
+      const c = p==='aggressive'?24:p==='defensive'?-50:0;
+      engine.postMessage(`setoption name Contempt value ${c}`);
+      sel.pers.forEach(btn => btn.classList.toggle('active', btn.dataset.personality===p));
+    }
+
+    // Events
+    sel.newGame.forEach(b=>b.addEventListener('click',()=>{ game.reset(); playerColor='w'; board.orientation('white'); engine.postMessage('ucinewgame'); updateUI(); }));
+    sel.undo.forEach(b=>b.addEventListener('click',()=>{ if(game.history().length>=2){ game.undo(); game.undo(); board.position(game.fen()); updateUI(); highlightLast(); }}));
+    sel.swap.forEach(b=>b.addEventListener('click',()=>{ playerColor = playerColor==='w'?'b':'w'; board.orientation(playerColor==='w'?'white':'black'); requestAIMove(); }));
+    sel.force.forEach(b=>b.addEventListener('click', requestAIMove));
+    sel.pers.forEach(b=>b.addEventListener('click',()=>{ setupPersonality(b.dataset.personality); requestAIMove(); }));
+
+    // Kickoff
+    initGame(); initBoard(); initEngine();
+  })();
+  </script>
+</body>
+</html>

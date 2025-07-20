@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Serene Chess</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        :root {
+            /* Light Mode Colors */
+            --bg-primary: #faf9f7;
+            --bg-secondary: #f5f4f1;
+            --surface: #ffffff;
+            --text-primary: #1a1915;
+            --text-secondary: #6b6862;
+            --text-tertiary: #9d9892;
+            --border-soft: 1px solid rgba(26, 25, 21, 0.06);
+            --shadow-gentle: 0 4px 6px -1px rgba(26, 25, 21, 0.03), 0 2px 4px -1px rgba(26, 25, 21, 0.05);
+            --shadow-elevated: 0 10px 15px -3px rgba(26, 25, 21, 0.05), 0 4px 6px -2px rgba(26, 25, 21, 0.03);
+            
+            /* Dark Mode Colors */
+            --dark-bg-primary: #1a1a1a;
+            --dark-bg-secondary: #2c2c2c;
+            --dark-surface: #3a3a3a;
+            --dark-text-primary: #f5f5f5;
+            --dark-text-secondary: #a0a0a0;
+            --dark-text-tertiary: #707070;
+            --dark-border-soft: 1px solid rgba(245, 245, 245, 0.1);
+            
+            /* Shared Colors */
+            --accent-warm: #8b7355;
+            --accent-soft: #a69080;
+            --accent-light: #d4c4b0;
+            --square-light: #f0e6d2;
+            --square-dark: #b08d57;
+            --square-selected: rgba(139, 115, 85, 0.4);
+            --square-possible: rgba(139, 115, 85, 0.2);
+            --square-last-move: rgba(204, 163, 103, 0.4);
+            --square-check: rgba(217, 48, 37, 0.3);
+            --success: #7c9885;
+            --warning: #c4956c;
+            --thinking: #8b9dc3;
+            --danger: #d93025;
+            
+            /* Spacing & Radius */
+            --space-xs: 0.25rem; --space-sm: 0.5rem; --space-md: 1rem; --space-lg: 1.5rem; --space-xl: 2rem; --space-2xl: 3rem;
+            --radius-sm: 6px; --radius-md: 12px; --radius-lg: 16px;
+        }
+
+        .dark-mode {
+            --bg-primary: var(--dark-bg-primary);
+            --bg-secondary: var(--dark-bg-secondary);
+            --surface: var(--dark-surface);
+            --text-primary: var(--dark-text-primary);
+            --text-secondary: var(--dark-text-secondary);
+            --text-tertiary: var(--dark-text-tertiary);
+            --border-soft: var(--dark-border-soft);
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .captured-pieces { 
+            /* ... existing styles ... */
+            display: flex; /* Ensure flex for alignment */
+            align-items: center; /* Vertically align */
+            flex-wrap: wrap; /* Allow wrapping */
+        }
+        .captured-pieces img { 
+            /* ... existing styles ... */
+            margin-right: -5px; /* Adjust spacing between img and count, or between images */
+            vertical-align: middle; /* Better alignment */
+        }
+        .captured-piece-count {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            font-weight: 600;
+            margin-right: var(--space-sm);
+            margin-left: 2px; /* Small gap from image */
+        }
+        .material-advantage { 
+            /* ... existing styles ... */
+            font-size: 0.9rem; /* Make it slightly larger */
+            font-weight: 600; /* Make it bolder */
+            color: var(--accent-warm); /* Use an accent color for emphasis */
+            margin-left: var(--space-md); /* More distinct separation */
+        }
+
+        /* For turn indicator */
+        .captured-pieces.current-turn {
+            box-shadow: inset 0 0 0 2px var(--accent-warm), /* Inner border */
+                        0 0 0 2px var(--accent-warm); /* Outer border (optional, for thicker look) */
+            border-color: var(--accent-warm); /* Blend with border-soft */
+            background-color: var(--bg-secondary); /* Slightly change background for selected side */
+            transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Ensure the material advantage is shown correctly for both sides */
+        .captured-pieces:nth-child(1) .material-advantage { /* White captured pieces container (top by default) */
+            color: var(--accent-warm); /* E.g., Warm color for white's material adv */
+        }
+        .captured-pieces:nth-child(2) .material-advantage { /* Black captured pieces container (bottom by default) */
+            color: var(--accent-warm); /* E.g., Warm color for black's material adv */
+        }
+        .dark-mode .material-advantage {
+            color: var(--accent-light); /* Lighter accent for dark mode */
+        }
+
+        html { 
+            scroll-behavior: smooth; 
+            -webkit-text-size-adjust: 100%;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh; /* Dynamic viewport height for mobile */
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            touch-action: manipulation;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .app {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            padding: var(--space-xl);
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: var(--space-xl);
+        }
+        
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            position: relative;
+        }
+        
+        .title-group { 
+            text-align: center; 
+            flex-grow: 1; 
+        }
+        
+        .title { 
+            font-size: 2.5rem; 
+            font-weight: 300; 
+        }
+        
+        .subtitle { 
+            font-size: 1rem; 
+            color: var(--text-secondary); 
+        }
+        
+        .game-layout { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: var(--space-xl); 
+            justify-content: center; 
+        }
+        
+        .board-container { 
+            display: flex; 
+            gap: var(--space-md); 
+            align-items: center; 
+            position: relative; 
+        }
+        
+        .evaluation-bar-container { 
+            width: 12px; 
+            height: 100%; 
+            max-height: 560px; 
+            background: var(--bg-secondary); 
+            border-radius: var(--radius-sm); 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column-reverse; 
+            position: relative; 
+        }
+        
+        .evaluation-bar { 
+            width: 100%; 
+            background: var(--text-primary); 
+            transition: height 0.3s ease; 
+        }
+        
+        .mate-in-label { 
+            writing-mode: vertical-rl; 
+            text-orientation: mixed; 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%) rotate(180deg); 
+            font-size: 0.8rem; 
+            font-weight: 500; 
+            color: white; 
+        }
+        
+        .board-area { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: var(--space-md); 
+            width: 100%; 
+            max-width: 560px; 
+        }
+        
+        .chessboard {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            box-shadow: var(--shadow-elevated);
+            position: relative;
+            touch-action: none;
+        }
+        
+        .square { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative; 
+            user-select: none; 
+            transition: background-color 0.2s ease;
+            touch-action: none;
+        }
+        
+        .chess-piece { 
+            width: 85%; 
+            height: 85%; 
+            cursor: grab; 
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2)); 
+            transition: transform 0.1s ease; 
+            touch-action: none;
+            pointer-events: auto;
+        }
+        
+        .chess-piece:active { 
+            cursor: grabbing; 
+        }
+        
+        .dragging { 
+            opacity: 0.5; 
+            cursor: grabbing; 
+        }
+
+        .square.light { background-color: var(--square-light); }
+        .square.dark { background-color: var(--square-dark); }
+        .square.drag-over { background-color: var(--square-selected); }
+        .square.last-move { background-color: var(--square-last-move) !important; }
+        .square.in-check { box-shadow: inset 0 0 0 4px var(--danger); background-color: var(--square-check) !important; }
+        .square.selected { background-color: var(--square-selected) !important; }
+        .square.possible-move { background-color: var(--square-possible) !important; }
+
+        /* Touch feedback */
+        .square:active, .chess-piece:active {
+            transform: scale(0.95);
+        }
+
+        .captured-pieces { 
+            display: flex; 
+            align-items: center; 
+            gap: var(--space-xs); 
+            min-height: 30px; 
+            width: 100%; 
+            padding: 0 var(--space-sm);
+            flex-wrap: wrap;
+        }
+        
+        .captured-pieces img { 
+            height: 20px; 
+            width: 20px; 
+        }
+        
+        .material-advantage { 
+            font-size: 0.8rem; 
+            font-weight: 500; 
+            color: var(--text-tertiary); 
+            margin-left: var(--space-sm); 
+        }
+
+        .side-panel { 
+            width: 320px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: var(--space-xl); 
+        }
+        
+        .panel-section { 
+            background: var(--surface); 
+            border: var(--border-soft); 
+            border-radius: var(--radius-lg); 
+            padding: var(--space-xl); 
+            box-shadow: var(--shadow-gentle); 
+            transition: background-color 0.3s ease, border-color 0.3s ease; 
+        }
+        
+        .section-title { 
+            font-size: 1.125rem; 
+            font-weight: 500; 
+            margin-bottom: var(--space-lg); 
+        }
+        
+        .slider-container { 
+            display: flex; 
+            flex-direction: column; 
+            gap: var(--space-sm); 
+            margin-bottom: var(--space-lg); 
+        }
+        
+        .slider-labels { 
+            display: flex; 
+            justify-content: space-between; 
+            font-size: 0.8rem; 
+            color: var(--text-tertiary); 
+        }
+        
+        input[type="range"] { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 100%; 
+            height: 8px; 
+            background: var(--bg-secondary); 
+            border-radius: var(--radius-sm); 
+            outline: none; 
+            transition: background .2s; 
+        }
+        
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 20px; 
+            height: 20px; 
+            background: var(--accent-warm); 
+            border-radius: 50%; 
+            cursor: pointer; 
+            border: 3px solid var(--surface); 
+            box-shadow: var(--shadow-gentle); 
+        }
+        
+        input[type="range"]::-moz-range-thumb { 
+            width: 20px; 
+            height: 20px; 
+            background: var(--accent-warm); 
+            border-radius: 50%; 
+            cursor: pointer; 
+            border: 3px solid var(--surface); 
+        }
+
+        .button-group { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: var(--space-md); 
+            width: 100%; 
+        }
+        
+    .preset-group { 
+        display: grid; 
+        /* This makes the grid columns adapt. It will try to fit as many columns as possible,
+        each being at least 90px wide (you can adjust this min-width) and taking up
+        equal remaining space. */
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); 
+        gap: var(--space-sm); 
+    }
+
+    /* Optional: Ensure buttons don't have unnecessary fixed widths if specified elsewhere */
+    .preset-group .btn {
+        width: auto; /* Let grid control width, overriding any fixed width */
+        flex-grow: 1; /* In case any flexbox rules apply, ensures they grow */
+    }
+
+    /* You already have a media query for smaller screens, ensure it complements this */
+    @media (max-width: 480px) {
+        .preset-group { 
+            grid-template-columns: 1fr; /* Force single column on very small screens for stacking */
+        }
+    }
+        
+        .btn { 
+            padding: var(--space-md) var(--space-lg); 
+            border: var(--border-soft); 
+            border-radius: var(--radius-md); 
+            background: var(--surface); 
+            color: var(--text-primary); 
+            font-size: 0.9rem; 
+            font-weight: 500; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: var(--space-sm);
+            min-height: 48px; /* Better touch targets */
+            touch-action: manipulation;
+        }
+        
+        .btn.active { background-color: var(--accent-light); }
+        .btn:hover:not(:disabled) { border-color: var(--accent-warm); transform: translateY(-1px); box-shadow: var(--shadow-gentle); }
+        .btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--accent-warm); color: white; border-color: var(--accent-warm); }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent-soft); }
+        
+        .move-history { 
+            max-height: 250px; 
+            overflow-y: auto; 
+            font-family: 'SF Mono', monospace; 
+            font-size: 0.9rem; 
+            line-height: 1.8; 
+            padding: var(--space-sm); 
+            background: var(--bg-secondary); 
+            border-radius: var(--radius-sm); 
+            border: var(--border-soft);
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .collapsible-title {
+            cursor: pointer;
+            display: flex; /* To align text and arrow */
+            justify-content: space-between; /* Push arrow to the right */
+            align-items: center; /* Vertically center */
+            margin-bottom: var(--space-lg); /* Keep original spacing */
+            user-select: none; /* Prevent text selection on click */
+            transition: color 0.2s ease;
+        }
+        .collapsible-title:hover {
+            color: var(--accent-warm); /* Subtle hover effect */
+        }
+        .toggle-arrow {
+            transition: transform 0.2s ease; /* Smooth rotation */
+            font-size: 0.8em; /* Slightly smaller arrow */
+            color: var(--text-tertiary);
+            margin-left: var(--space-sm);
+        }
+        .collapsible-title.collapsed .toggle-arrow {
+            transform: rotate(-90deg); /* Rotate up/left when collapsed */
+        }
+        /* Initially hide content on mobile, manage with JS */
+        .collapsible-content {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out; /* Smooth collapse/expand */
+            overflow: hidden; /* Hide overflow during transition */
+            max-height: 250px; /* Default max height from your existing .move-history */
+            opacity: 1;
+            visibility: visible; /* Default visible */
+        }
+        .collapsible-content.collapsed {
+            max-height: 0; /* Collapse to 0 height */
+            opacity: 0;
+            visibility: hidden; /* Hide completely */
+        }
+        /* Override for mobile to hide initially */
+        @media (max-width: 768px) {
+            .move-history.collapsible-content {
+                display: block; /* Important: reset from previous `display: none` in updateLayoutForDevice */
+            }
+            .collapsible-title {
+                margin-bottom: var(--space-sm); /* More compact on mobile */
+            }
+        }
+
+        .move-pair { 
+            display: grid; 
+            grid-template-columns: 40px 1fr 1fr; 
+            gap: var(--space-sm); 
+            padding: var(--space-xs) var(--space-sm); 
+            border-radius: var(--radius-sm); 
+            transition: background 0.2s ease; 
+            cursor: pointer;
+            min-height: 36px;
+            align-items: center;
+        }
+        
+        .move-pair:hover { background: var(--square-possible); }
+        .move-pair:active { transform: scale(0.98); }
+        .move-number { color: var(--text-tertiary); font-weight: 500; }
+        .move { color: var(--text-secondary); }
+        
+        .thinking-indicator { 
+            display: none; 
+            align-items: center; 
+            gap: var(--space-sm); 
+            color: var(--text-secondary); 
+            font-size: 0.9rem; 
+            min-height: 22px; 
+        }
+        
+        .thinking-indicator.visible { display: flex; }
+        .thinking-dots { display: flex; gap: var(--space-xs); }
+        .thinking-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--thinking); animation: thinking 1.4s infinite ease-in-out; }
+        .thinking-dot:nth-child(1) { animation-delay: -0.32s; } 
+        .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes thinking { 0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; } 40% { transform: scale(1.2); opacity: 1; } }
+        
+        .promotion-overlay { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(0, 0, 0, 0.5); 
+            display: none; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 100; 
+        }
+        
+        .promotion-dialog { 
+            display: flex; 
+            gap: var(--space-md); 
+            background: var(--surface); 
+            padding: var(--space-lg); 
+            border-radius: var(--radius-md); 
+            box-shadow: var(--shadow-elevated); 
+        }
+        
+        .promotion-piece { 
+            width: 64px; 
+            height: 64px; 
+            cursor: pointer; 
+            transition: transform 0.2s ease;
+            touch-action: manipulation;
+        }
+        
+        .promotion-piece:hover { transform: scale(1.1); }
+        .promotion-piece:active { transform: scale(0.9); }
+        
+        .game-over-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(26, 25, 21, 0.7); 
+            backdrop-filter: blur(5px); 
+            display: none; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 200; 
+            animation: fadeIn 0.3s ease-out; 
+        }
+        
+        .game-over-dialog { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: var(--space-lg); 
+            background: var(--surface); 
+            padding: var(--space-2xl); 
+            border-radius: var(--radius-lg); 
+            box-shadow: var(--shadow-elevated); 
+            text-align: center; 
+            margin: var(--space-md);
+            max-width: 90vw;
+        }
+        
+        .game-over-title { 
+            font-size: 2rem; 
+            font-weight: 500; 
+        }
+        
+        .game-over-message { 
+            font-size: 1rem; 
+            color: var(--text-secondary); 
+        }
+
+        .toggle-group { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            min-height: 48px;
+        }
+        
+        .toggle-switch { 
+            position: relative; 
+            display: inline-block; 
+            width: 40px; 
+            height: 24px; 
+        }
+        
+        .toggle-switch input { 
+            opacity: 0; 
+            width: 0; 
+            height: 0; 
+        }
+        
+        .toggle-slider { 
+            position: absolute; 
+            cursor: pointer; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background-color: #ccc; 
+            transition: .4s; 
+            border-radius: 24px; 
+        }
+        
+        .toggle-slider:before { 
+            position: absolute; 
+            content: ""; 
+            height: 16px; 
+            width: 16px; 
+            left: 4px; 
+            bottom: 4px; 
+            background-color: white; 
+            transition: .4s; 
+            border-radius: 50%; 
+        }
+        
+        input:checked + .toggle-slider { 
+            background-color: var(--accent-warm); 
+        }
+        
+        input:checked + .toggle-slider:before { 
+            transform: translateX(16px); 
+        }
+        
+        .settings-modal { 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 300; 
+            display: none; 
+            width: 90%; 
+            max-width: 320px; 
+        }
+        
+        .settings-icon { 
+            font-size: 1.5rem; 
+            cursor: pointer;
+            padding: var(--space-sm);
+            border-radius: var(--radius-sm);
+            transition: background-color 0.2s ease;
+            touch-action: manipulation;
+        }
+        
+        .settings-icon:hover {
+            background-color: var(--bg-secondary);
+        }
+        
+        .settings-icon:active {
+            transform: scale(0.9);
+        }
+
+        /* Status indicators */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            min-height: 32px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .connection-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Fullscreen mobile layout */
+        @media (max-width: 1024px) {
+            .game-layout { 
+                flex-direction: column; 
+                align-items: center; 
+            }
+            
+            .side-panel { 
+                width: 100%; 
+                max-width: 560px; 
+                order: 2; 
+            }
+            
+            .board-container { 
+                order: 1; 
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app { 
+                padding: var(--space-md); 
+                gap: var(--space-lg); 
+            }
+            
+            .title { 
+                font-size: 2rem; 
+            }
+            
+            .board-container { 
+                flex-direction: column-reverse; 
+            }
+            
+            .evaluation-bar-container { 
+                width: 100%; 
+                height: 12px; 
+                flex-direction: row; 
+                max-height: none;
+            }
+            
+            .evaluation-bar { 
+                height: 100%; 
+            }
+            
+            .mate-in-label { 
+                writing-mode: horizontal-tb; 
+                text-orientation: mixed; 
+                transform: translate(-50%, -50%) rotate(0deg); 
+            }
+            
+            .side-panel { 
+                gap: var(--space-lg); 
+            }
+            
+            .panel-section { 
+                padding: var(--space-lg); 
+            }
+            
+            .button-group { 
+                grid-template-columns: 1fr; 
+                gap: var(--space-sm); 
+            }
+            
+            /* Stack buttons vertically on mobile */
+            .button-group {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .btn {
+                font-size: 1rem;
+                padding: var(--space-lg);
+            }
+            
+            /* Larger chess pieces for better touch */
+            .chess-piece {
+                width: 90%;
+                height: 90%;
+            }
+            
+            /* Hide move history on very small screens to save space */
+            .move-history {
+                max-height: 150px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .app { 
+                padding: var(--space-sm);
+                gap: var(--space-md);
+            }
+            
+            .title { 
+                font-size: 1.75rem; 
+            }
+            
+            .subtitle { 
+                font-size: 0.9rem; 
+            }
+            
+            .board-area { 
+                gap: var(--space-sm); 
+            }
+            
+            .side-panel { 
+                gap: var(--space-md); 
+            }
+            
+            .panel-section { 
+                padding: var(--space-md); 
+            }
+            
+            .preset-group { 
+                grid-template-columns: 1fr; 
+                gap: var(--space-sm);
+            }
+            
+            .settings-modal { 
+                width: 95%;
+                max-width: none;
+            }
+            
+            .chess-piece { 
+                width: 95%; 
+                height: 95%; 
+            }
+            
+            .game-over-dialog {
+                padding: var(--space-lg);
+            }
+            
+            .game-over-title {
+                font-size: 1.5rem;
+            }
+            
+            /* Compact captured pieces */
+            .captured-pieces img {
+                height: 16px;
+                width: 16px;
+            }
+            
+            /* Smaller promotion pieces */
+            .promotion-piece {
+                width: 48px;
+                height: 48px;
+            }
+        }
+
+        /* Landscape mobile optimization */
+        @media (max-height: 600px) and (orientation: landscape) {
+            .app {
+                padding: var(--space-sm);
+                gap: var(--space-sm);
+            }
+            
+            .header {
+                margin-bottom: var(--space-sm);
+            }
+            
+            .title {
+                font-size: 1.5rem;
+            }
+            
+            .subtitle {
+                display: none;
+            }
+            
+            .game-layout {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            
+            .side-panel {
+                width: 280px;
+                max-width: 280px;
+            }
+            
+            .panel-section {
+                padding: var(--space-sm);
+            }
+            
+            .move-history {
+                max-height: 120px;
+            }
+        }
+
+        /* Animation enhancements */
+        .app { 
+            animation: fadeIn 0.6s ease-out; 
+        }
+        
+        @keyframes fadeIn { 
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            } 
+        }
+        
+        /* Focus states for accessibility */
+        :is(.btn, .settings-icon, .square, .toggle-slider):focus-visible { 
+            outline: 2px solid var(--accent-warm); 
+            outline-offset: 2px; 
+        }
+        
+        /* Scrollbar styling */
+        .move-history::-webkit-scrollbar { 
+            width: 6px; 
+        }
+        
+        .move-history::-webkit-scrollbar-track { 
+            background: var(--bg-secondary); 
+            border-radius: 3px; 
+        }
+        
+        .move-history::-webkit-scrollbar-thumb { 
+            background: var(--accent-light); 
+            border-radius: 3px; 
+        }
+        
+        .move-history::-webkit-scrollbar-thumb:hover { 
+            background: var(--accent-warm); 
+        }
+
+        /* Performance optimizations */
+        .chess-piece {
+            will-change: transform;
+        }
+        
+        .square {
+            contain: layout style paint;
+        }
+        
+        .evaluation-bar {
+            will-change: transform;
+        }
+
+        /* PWA support indicators */
+        @media (display-mode: standalone) {
+            .header::after {
+                content: "PWA";
+                position: absolute;
+                top: 0;
+                right: 0;
+                font-size: 0.7rem;
+                color: var(--text-tertiary);
+                padding: 2px 4px;
+                border-radius: 2px;
+                background: var(--bg-secondary);
+            }
+        }
+
+        /* Dark mode specific mobile optimizations */
+        .dark-mode .chess-piece {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+        }
+
+        .dark-mode .square.light {
+            background-color: #3a3a3a;
+        }
+
+        .dark-mode .square.dark {
+            background-color: #2c2c2c;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="title-group">
+                <h1 class="title">Serene Chess</h1>
+                <p class="subtitle">A thoughtful space for deep play</p>
+            </div>
+            <span class="settings-icon" id="settings-icon" role="button" tabindex="0" aria-label="Settings">⚙️</span>
+        </header>
+
+        <main class="game-layout">
+            <div class="board-container">
+                <div class="evaluation-bar-container evaluation-display" title="Position Evaluation">
+
+                    <div class="evaluation-bar" id="evaluation-bar"></div>
+                    <span class="mate-in-label" id="mate-in-label" aria-hidden="true"></span>
+                </div>
+                <div class="board-area">
+                    <div class="captured-pieces" id="white-captured" aria-label="White captured pieces"></div>
+                    <div class="status-bar">
+                <div class="thinking-indicator" id="thinking-indicator">
+                    <div class="thinking-dots">
+                        <div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div>
+                    </div>
+                </div>
+                        <div class="connection-indicator" title="Engine connected"></div>
+                        <span id="engine-indicator" style="display:none"></span>
+                        <span id="engine-status" style="margin-left:8px"></span>
+                    </div>
+                    <div class="chessboard" id="chessboard" role="grid" aria-label="Chess board">
+                        <div class="promotion-overlay" id="promotion-overlay">
+                            <div class="promotion-dialog" role="dialog" aria-label="Choose promotion piece"></div>
+                        </div>
+                    </div>
+                    <div class="captured-pieces" id="black-captured" aria-label="Black captured pieces"></div>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="new-game">New Game</button>
+                        <button class="btn" id="undo-move" disabled>Undo</button>
+                        <button class="btn" id="flip-switch-button">Play as Black</button>
+                        <button class="btn" id="force-move" disabled>Force Move</button>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="side-panel">
+                <section class="panel-section">
+                    <h3 class="section-title">Engine Presets</h3>
+                    <div class="preset-group">
+                        <button class="btn" data-preset="defender" title="Defender: Cautious and solid.">Defender</button>
+                        <button class="btn active" data-preset="balanced" title="Balanced: A neutral, well-rounded style.">Balanced</button>
+                        <button class="btn" data-preset="aggressor" title="Aggressor: Prefers attacking and complications.">Aggressor</button>
+                    </div>
+
+                </section>
+
+                <section class="panel-section">
+                    <h3 class="section-title">Engine Strength</h3>
+                    <div class="slider-container">
+                        <input type="range" id="elo-slider" min="1200" max="3000" value="1800" step="50">
+                        <div class="slider-labels">
+                            <span id="elo-label-min">Beginner</span>
+                            <span id="elo-label-current">Expert</span>
+                            <span id="elo-label-max">Grandmaster</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <section class="panel-section">
+                <h3 class="section-title collapsible-title" id="move-history-toggle">
+                    <span>Move History</span>
+                    <span class="toggle-arrow">▼</span>
+                </h3>
+                <div class="move-history collapsible-content" id="move-history">
+                    </div>
+            </section>
+                    <div class="move-history" id="move-history" role="log" aria-live="polite" aria-label="Game moves">
+                        <div class="move-pair">
+                            <span class="move-number">1.</span>
+                            <span class="move">e4</span>
+                            <span class="move">e5</span>
+                        </div>
+                        <div class="move-pair">
+                            <span class="move-number">2.</span>
+                            <span class="move">Nf3</span>
+                            <span class="move"></span>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </main>
+
+        <div class="settings-modal" id="settings-modal" role="dialog" aria-labelledby="settings-title">
+            <div class="panel-section">
+                <h3 class="section-title" id="settings-title">Settings</h3>
+                <div class="toggle-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="dark-mode-toggle">
+                        <span class="toggle-slider"></span>
+                    </div>
+                </div>
+        <div class="toggle-group">
+            <label for="sound-toggle">Sound Effects</label>
+            <div class="toggle-switch">
+                <input type="checkbox" id="sound-toggle"> <span class="toggle-slider"></span>
+            </div>
+        </div>
+                <div class="toggle-group">
+                    <label for="auto-queen-toggle">Auto-Queen Promotion</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="auto-queen-toggle">
+                        <span class="toggle-slider"></span>
+                    </div>
+                </div>
+                <div class="toggle-group">
+                    <label for="highlight-moves-toggle">Highlight Legal Moves</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="highlight-moves-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn" id="close-settings">Close</button>
+                    <button class="btn" id="reset-settings">Reset</button>
+                </div>
+                <div class="toggle-group">
+    <label for="human-mode-toggle">Human vs Human</label>
+    <div class="toggle-switch">
+        <input type="checkbox" id="human-mode-toggle">
+        <span class="toggle-slider"></span>
+    </div>
+</div>
+        <div class="toggle-group">
+            <label for="training-mode-toggle">Training Mode</label>
+            <div class="toggle-switch">
+                <input type="checkbox" id="training-mode-toggle">
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+
+            </div>
+        </div>
+
+        <div class="game-over-overlay" id="game-over-overlay">
+            <div class="game-over-dialog">
+                <h2 class="game-over-title" id="game-over-title">Game Over</h2>
+                <p class="game-over-message" id="game-over-message">Checkmate! White wins.</p>
+                <button class="btn btn-primary" id="game-over-new-game">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>

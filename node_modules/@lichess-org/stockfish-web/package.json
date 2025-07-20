@@ -1,0 +1,17 @@
+{
+  "name": "@lichess-org/stockfish-web",
+  "version": "0.0.13",
+  "author": "T-bone Duplexus",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "types": "stockfishWeb.d.ts",
+  "files": [
+    "sf16-7.js",
+    "sf16-7.wasm",
+    "sf171-79.js",
+    "sf171-79.wasm",
+    "fsf14.js",
+    "fsf14.wasm",
+    "stockfishWeb.d.ts"
+  ]
+}
