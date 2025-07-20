@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dragDebounceTimeout;
     const MOBILE_BREAKPOINT = 768;
     let draggedPieceEl = null;
+    let synth = null; 
 
     // --- DOM Elements ---
     const boardEl = document.getElementById('chessboard');
@@ -173,10 +174,23 @@ document.addEventListener('DOMContentLoaded', () => {
     engine.onError = (err) => console.error('[ENGINE ERROR]', err);
 
 
+// Find and replace the entire playSound function
 function playSound(move) {
-    // Only attempt to play sound if sound is enabled and _playMoveSound function has been initialized
-    if (soundEnabled && typeof window._playMoveSound === 'function') {
-        window._playMoveSound(move);
+    // Only play sound if it's enabled AND the synth has been initialized
+    if (soundEnabled && synth) {
+        try {
+            if (move.captured) { // More reliable check for captures
+                synth.triggerAttackRelease("E4", "8n");
+            } else if (move.flags.includes('k') || move.flags.includes('q')) {
+                synth.triggerAttackRelease("G4", "8n"); // Castle
+            } else if (move.san.includes('#') || move.san.includes('+')) { // Check for check/mate in SAN
+                synth.triggerAttackRelease("B4", "8n"); // Check or Checkmate
+            } else {
+                synth.triggerAttackRelease("C4", "8n"); // Normal move
+            }
+        } catch (error) {
+            console.warn("Could not play sound:", error);
+        }
     }
 }
     // --- END Sound Synthesis ---
@@ -1198,22 +1212,55 @@ function applyPreset(presetName) {
         saveSettings(); // Add this line
     });
 
-    settingsIcon.addEventListener('click', () => {
-        settingsModal.style.display = settingsModal.style.display === 'block' ? 'none' : 'block';
-    });
-    document.addEventListener('click', (e) => {
-        if (!settingsModal.contains(e.target) && e.target !== settingsIcon) {
-            settingsModal.style.display = 'none';
+// --- Force Toggle Interaction for Mobile Devices ---
+// This makes the entire toggle row clickable, which is more reliable on iOS.
+document.querySelectorAll('.toggle-group').forEach(group => {
+    group.addEventListener('click', (e) => {
+        // Don't interfere with the reset/close buttons if they're in a similar container
+        if (e.target.tagName === 'BUTTON') return;
+
+        const input = group.querySelector('input[type="checkbox"]');
+        if (input) {
+            // Manually flip the checked state
+            input.checked = !input.checked;
+
+            // IMPORTANT: Manually trigger the 'change' event
+            // so that your other listeners (for sound, dark mode, etc.) will run.
+            input.dispatchEvent(new Event('change', { 'bubbles': true }));
         }
     });
+});
+// --- Settings Modal Logic (replaces the three old listeners) ---
 
-        // --- ADD THIS NEW CODE BLOCK BELOW IT ---
-    const closeSettingsBtn = document.getElementById('close-settings');
-    if (closeSettingsBtn) {
-        closeSettingsBtn.addEventListener('click', () => {
-            settingsModal.style.display = 'none';
+function toggleSettingsModal(show) {
+    // We check for settingsModal's existence here for safety
+    if (settingsModal) {
+        settingsModal.style.display = show ? 'block' : 'none';
+    }
+}
+
+    // 1. Listener for the gear icon to open the modal
+    if (settingsIcon) {
+        settingsIcon.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevents the click from reaching the document and closing the modal
+            const isVisible = settingsModal.style.display === 'block';
+            toggleSettingsModal(!isVisible);
         });
     }
+
+    // 2. Listener for the "Close" button inside the modal
+    const closeSettingsBtn = document.getElementById('close-settings');
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', () => toggleSettingsModal(false));
+    }
+
+    // 3. Listener to prevent clicks *inside* the modal from closing it
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // 4. Listener on the whole document to close the modal if you click *outside*
+    document.addEventListener('click', () => toggleSettingsModal(false));
 
 function updateHistory() {
        historyEl.innerHTML = '';
@@ -1548,38 +1595,24 @@ function loadSettings() {
 }
 
     // --- Initialization (runs once, after a user gesture for audio) ---
-document.body.addEventListener('click', () => {
-    if (!isAudioReady) {
-        // --- NEW: Explicitly create and set Tone.context after first user gesture ---
-        // This ensures all Tone.js internal nodes are created within an active/resumed AudioContext.
-        Tone.context = new Tone.Context(); 
-        Tone.start(); // This will resume the newly created context
-
-        isAudioReady = true; // Set flag to true
-
-        // --- Initialize synth here, AFTER AudioContext is started ---
-        // Now that Tone.context is initialized, it's safe to create instruments.
-        let synth = new Tone.Synth().toDestination(); // CHANGED TO 'let'
-
-        // Define the play sound function that uses the *locally* created synth.
-        // We'll expose it globally for the `playSound` wrapper function.
-        window._playMoveSound = (move) => {
-            // `soundEnabled` will be checked by the `playSound` wrapper
+// Find and replace the entire body click listener at the end of the file
+    document.body.addEventListener('click', async () => {
+        if (!isAudioReady) {
             try {
-                if (move.flags.includes('c')) synth.triggerAttackRelease("E4", "8n");
-                else if (move.flags.includes('k') || move.flags.includes('q')) synth.triggerAttackRelease("G4", "8n");
-                else if (game.isCheck() || game.isCheckmate()) synth.triggerAttackRelease("B4", "8n");
-                else synth.triggerAttackRelease("C4", "8n");
+                // Tone.start() is the most reliable way to start the AudioContext
+                await Tone.start();
+                // Now that the context is running, it's safe to create instruments
+                synth = new Tone.Synth().toDestination();
+                isAudioReady = true;
+                console.log('AudioContext started and synth initialized!');
             } catch (error) {
-                console.warn("Could not play sound:", error);
+                console.error("Could not start audio context:", error);
+                // Disable sound if it fails to start, to prevent future errors
+                soundEnabled = false; 
+                if(soundToggle) soundToggle.checked = false;
             }
-        };
-
-        console.log('AudioContext started and Tone.js initialized!');
-    }
-    // This line remains outside the `if` block, making `startNewGame` globally callable on first click.
-    window.ChessApp = { init: startNewGame }; 
-}, { once: true });
+        }
+    }, { once: true });
 
     try {
         engine.initialize();
