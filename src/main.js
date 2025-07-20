@@ -422,7 +422,6 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
             // --- End Highlight Legal Moves ---
             
             // Add event listeners for mouse drag/drop and touch
-            squareEl.addEventListener('dragover', handleDragOver);
             squareEl.addEventListener('dragleave', (e) => e.currentTarget.classList.remove('drag-over'));
             squareEl.addEventListener('click', () => onSquareClick(squareName));
 
