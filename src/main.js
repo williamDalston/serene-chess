@@ -1204,13 +1204,28 @@ function applyPreset(presetName) {
     }
     saveSettings(); });// Don't forget to save settings on change });
 
-    trainingModeToggle.addEventListener('change', (e) => {
-        trainingMode = e.target.checked;
-        engineControls.forEach(control => control.style.opacity = trainingMode ? '0.5' : '1');
-        engineControls.forEach(control => control.style.pointerEvents = trainingMode ? 'none' : 'auto');
-        renderBoard(game.fen(), boardOrientation);
-        saveSettings(); // Add this line
+// REPLACE your existing trainingModeToggle listener with this one
+trainingModeToggle.addEventListener('change', (e) => {
+    trainingMode = e.target.checked;
+    saveSettings(); // Save the new state
+
+    // Find all the engine control sections (presets, ELO slider)
+    const engineControlSections = document.querySelectorAll('[data-preset], [id="elo-slider"]');
+
+    // Visually disable or enable the engine controls
+    engineControlSections.forEach(control => {
+        const parentSection = control.closest('.panel-section');
+        if (parentSection) {
+            parentSection.style.opacity = trainingMode ? '1' : '0.5'; // Opposite logic: enabled when trainingMode is OFF
+            parentSection.style.pointerEvents = trainingMode ? 'auto' : 'none';
+        }
     });
+
+    // If we just turned the engine ON and it's its turn to move, make it think.
+    if (!trainingMode && game.turn() !== playerColor && !game.isGameOver()) {
+        requestEngineMove();
+    }
+});
     // Add event listeners for auto-queen and highlight moves toggles here
     const autoQueenToggle = document.getElementById('auto-queen-toggle');
     if (autoQueenToggle) { // Defensive check in case element isn't found

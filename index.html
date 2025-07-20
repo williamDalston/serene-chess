@@ -533,15 +533,20 @@
         font-weight: 600; /* Bolder text for the new font */
     }
             
-        .thinking-indicator { 
-            display: none; 
-            align-items: center; 
-            gap: var(--space-sm); 
-            color: var(--text-secondary); 
-            font-size: 0.9rem; 
-            min-height: 22px; 
-        }
-        
+    /* REPLACE the old .thinking-indicator rules with this */
+    .thinking-indicator { 
+        display: flex; /* It should always be flex */
+        align-items: center; 
+        gap: var(--space-sm); 
+        color: var(--text-secondary); 
+        font-size: 0.9rem; 
+        min-height: 22px; 
+        visibility: hidden; /* Use visibility to hide it without collapsing space */
+    }
+    .thinking-indicator.visible { 
+        visibility: visible; /* Use visibility to show it */
+    }
+            
         .thinking-indicator.visible { display: flex; }
         .thinking-dots { display: flex; gap: var(--space-xs); }
         .thinking-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--thinking); animation: thinking 1.4s infinite ease-in-out; }
@@ -1169,7 +1174,6 @@
                 <h1 class="title">Serene Chess</h1>
                 <p class="subtitle">A thoughtful space for deep play</p>
             </div>
-            <span class="settings-icon" id="settings-icon" role="button" tabindex="0" aria-label="Settings">⚙️</span>
         </header>
 
         <main class="game-layout">
@@ -1214,18 +1218,23 @@
 
 
         <aside class="side-panel">
-    <section class="panel-section">
-        <div class="toggle-group">
-            <div class="toggle-info">
-                <div class="toggle-label">Training Mode</div>
-                <div class="toggle-description">Disable the engine to control both sides.</div>
-            </div>
-            <div class="toggle-switch">
-                <input type="checkbox" id="training-mode-toggle">
-                <span class="toggle-slider"></span>
-            </div>
+<section class="panel-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+        <h3 class="section-title" style="margin-bottom: 0;">Controls</h3>
+        <span class="settings-icon" id="settings-icon" role="button" tabindex="0" aria-label="Settings">⚙️</span>
+    </div>
+
+    <div class="toggle-group">
+        <div class="toggle-info">
+            <div class="toggle-label">Training Mode</div>
+            <div class="toggle-description">Disable the engine to control both sides.</div>
         </div>
-    </section>
+        <div class="toggle-switch">
+            <input type="checkbox" id="training-mode-toggle" checked>
+            <span class="toggle-slider"></span>
+        </div>
+    </div>
+</section>
 
     <section class="panel-section">
         <h3 class="section-title">Engine Presets</h3>
@@ -1305,14 +1314,6 @@
     </div>
 </div>
 
-
-        <div class="toggle-group">
-            <label for="training-mode-toggle">Training Mode</label>
-            <div class="toggle-switch">
-                <input type="checkbox" id="training-mode-toggle">
-                <span class="toggle-slider"></span>
-            </div>
-        </div>
 
 
 
