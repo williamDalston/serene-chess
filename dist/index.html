@@ -1073,7 +1073,7 @@
         flex-direction: column;
         justify-content: space-evenly;
     }
-        /* PASTE THIS BLOCK TO FIX THE MODAL STYLES */
+        /* Ensure your modal CSS matches this block */
         .settings-backdrop {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -1083,26 +1083,32 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Hidden by default */
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
         .settings-backdrop.visible {
+    /* Made visible by JavaScript */
     opacity: 1;
     visibility: visible;
 }
         .settings-modal {
+    /* Starts scaled down and invisible */
+    display: none;
     transform: scale(0.95) translateY(10px);
     opacity: 0;
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
         .settings-backdrop.visible .settings-modal {
+    display: block; /* Becomes visible when the backdrop has the .visible class */
     transform: scale(1) translateY(0);
     opacity: 1;
+    pointer-events: auto;
 }
 
     </style>
-  <script type="module" crossorigin src="/assets/index-aat5PUcR.js"></script>
+  <script type="module" crossorigin src="/assets/index-u4F5le3d.js"></script>
 </head>
 <body>
     <div class="app">

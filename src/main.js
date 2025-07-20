@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     engine.onInfo = (info) => { if (info.score) updateEvaluationBar(info.score, game.turn()); };
 // REPLACE with this targeted version
     engine.onBestMove = (moveStr) => {
+        if (trainingMode) return; 
         const move = game.move(moveStr, { sloppy: true });
 
         if (move) {
