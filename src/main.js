@@ -94,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const promotionOverlay = document.getElementById('promotion-overlay');
     const promotionDialog = promotionOverlay ? promotionOverlay.querySelector('.promotion-dialog') : null;
     const eloSlider = document.getElementById('elo-slider');
-    const eloLabelCurrent = document.getElementById('elo-label-current');
     const presetButtons = document.querySelectorAll('[data-preset]');
     const whiteCapturedEl = document.getElementById('white-captured');
     const blackCapturedEl = document.getElementById('black-captured');
@@ -780,7 +779,7 @@ function applyPreset(presetName) {
         else if (elo < 2400) label = 'Expert';
         else label = 'Grandmaster';
 
-        eloLabelCurrent.textContent = label;
+       
     }
 
     eloSlider.addEventListener('input', (e) => {
@@ -866,11 +865,11 @@ function toggleSettingsModal(show) {
 }
 
     // 1. Listener for the gear icon to open the modal
+// REPLACE your existing listener with this one
     if (settingsIcon) {
         settingsIcon.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevents the click from reaching the document and closing the modal
-            const isVisible = settingsModal.style.display === 'block';
-            toggleSettingsModal(!isVisible);
+            e.stopPropagation(); // Prevents the click from also closing the modal
+            toggleSettingsModal(true); // Explicitly tell the modal to open
         });
     }
 
