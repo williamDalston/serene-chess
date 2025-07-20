@@ -155,18 +155,14 @@ document.addEventListener('DOMContentLoaded', () => {
         startNewGame();
     };
     engine.onInfo = (info) => { if (info.score) updateEvaluationBar(info.score, game.turn()); };
+    // REPLACE with this simplified version
     engine.onBestMove = (moveStr) => {
         const move = game.move(moveStr, { sloppy: true });
         if (move) {
             playSound(move);
             lastMove = move;
-            updateBoardAfterMove(move); // This is correct
+            updateApplicationState(); // Tell the master function to handle the consequences
         }
-        hideThinking();
-        updateHistory();
-        updateCapturedPieces();
-        checkGameOver();
-        updateTurnIndicator();
     };
     engine.onError = (err) => console.error('[ENGINE ERROR]', err);
 
@@ -268,21 +264,16 @@ if (moveHistoryToggleEl) {
 }
     // --- Game & UI Logic ---
    // --- Game & UI Logic ---
+// REPLACE startNewGame and startGameFlow with this
 function startNewGame() {
-        loadingOverlay.classList.remove('hidden');
-        game.reset(); // Reset the chess.js game board
-        lastMove = null; // Clear last move highlighting
-        engine.stop(); // Stop any ongoing engine calculations
-        engine.newGame(); // Tell the engine to start a new game from scratch
-        gameOverOverlay.style.display = 'none'; // Hide any game over messages
-        updateHistory(); // Clear move history display
-        updateCapturedPieces(); // Clear captured pieces display
-        updateFlipSwitchButtonText(); // Ensure the "Play as" button text is correct based on playerColor
-        updateEvaluationBar({ type: 'cp', value: 0 }); // Reset evaluation bar to neutral
-        
-        // --- NEW: Initiate the game flow ---
-        startGameFlow(); // This is the ONLY call that should manage board rendering and next move logic
-    }
+    game.reset();
+    lastMove = null;
+    engine.stop();
+    engine.newGame();
+    gameOverOverlay.style.display = 'none';
+    updateFlipSwitchButtonText();
+    updateApplicationState(); // Tell the master function to set up the new game state
+}
 
 function requestEngineMove(isFast = false) {
         if (game.isGameOver() || trainingMode) return;
@@ -340,6 +331,43 @@ function requestEngineMove(isFast = false) {
 
         updateTurnIndicator(); // Visually indicate whose turn it is
     }
+
+// PASTE THIS NEW MASTER FUNCTION
+function updateApplicationState() {
+    // 1. UPDATE THE VISUAL BOARD: This is the only place a full re-render is called.
+    renderBoard(game.fen(), boardOrientation);
+
+    // 2. UPDATE ALL UI COMPONENTS
+    updateHistory();
+    updateCapturedPieces();
+    updateTurnIndicator();
+
+    // 3. UPDATE UI STATE BASED ON `trainingMode`
+    const isEngineDisabled = trainingMode;
+    const enginePresetPanel = document.querySelector('[data-preset="defender"]')?.closest('.panel-section');
+    const engineStrengthPanel = document.getElementById('elo-slider')?.closest('.panel-section');
+    [enginePresetPanel, engineStrengthPanel].forEach(panel => {
+        if (panel) {
+            panel.style.opacity = isEngineDisabled ? '0.5' : '1';
+            panel.style.pointerEvents = isEngineDisabled ? 'none' : 'auto';
+        }
+    });
+
+    // 4. CHECK FOR GAME OVER
+    if (checkGameOver()) {
+        hideThinking();
+        return; // Stop here if the game is over.
+    }
+
+    // 5. DECIDE WHAT HAPPENS NEXT (The most important logic)
+    // This is now the ONLY place in the entire app that decides if the engine should move.
+    const isEngineTurn = game.turn() !== playerColor;
+    if (!isEngineDisabled && isEngineTurn) {
+        requestEngineMove();
+    } else {
+        hideThinking();
+    }
+}
 
     function checkGameOver() {
         if (!game.isGameOver() || trainingMode) {
@@ -551,34 +579,15 @@ function dragEnd(event) {
 // --- Move Execution ---
 
 // This is the new, single function that handles all player moves.
+// REPLACE with this simplified version
 function handlePlayerMove(from, to) {
-    // Find the move in the list of legal moves to validate it.
-    const legalMove = game.moves({ square: from, verbose: true }).find(m => m.to === to);
-
-    if (!legalMove) {
-        // If the move is illegal, just re-render the board once to cancel any visual selection.
-        renderBoard(game.fen(), boardOrientation);
-        return;
-    }
-
-    // If the move is legal, apply it to the game state.
-    // We default to 'queen' for promotions to keep this fix simple.
-    const result = game.move({ from, to, promotion: 'q' });
-
-    if (result) {
-        playSound(result);
-        lastMove = result;
-        updateBoardAfterMove(result); // This is our new efficient updater.
-
-        // Update the rest of the UI.
-        updateHistory();
-        updateCapturedPieces();
-        if (checkGameOver()) return;
-
-        // This is the key logic: if training mode is OFF, now it's the engine's turn.
-        if (!trainingMode) {
-            requestEngineMove();
-        }
+    const move = game.move({ from, to, promotion: 'q' });
+    if (move) {
+        playSound(move);
+        lastMove = move;
+        updateApplicationState(); // Tell the master function to handle the consequences
+    } else {
+        renderBoard(game.fen(), boardOrientation); // If move is illegal, just redraw to reset selection
     }
 }
 
@@ -682,42 +691,30 @@ function onSquareClick(square) {
     // --- Event Listeners & Helpers ---
     newGameBtn.addEventListener('click', startNewGame);
     gameOverNewGameBtn.addEventListener('click', startNewGame);
+// REPLACE with this simplified version
 flipSwitchBtn.addEventListener('click', () => {
-        if(thinkingIndicator && thinkingIndicator.classList.contains('visible')) return; 
+    if (thinkingIndicator && thinkingIndicator.classList.contains('visible')) return;
+    playerColor = (playerColor === 'w') ? 'b' : 'w';
+    boardOrientation = (playerColor === 'w') ? 'white' : 'black';
+    updateFlipSwitchButtonText();
+    updateApplicationState(); // Tell the master function to handle the consequences
+});
 
-        playerColor = (playerColor === 'w') ? 'b' : 'w';
-        boardOrientation = (playerColor === 'w') ? 'white' : 'black'; // Update the global variable
 
-        updateFlipSwitchButtonText(); // Update the button text
-
-        // --- NEW: Immediately render the board with the new orientation ---
-        // This should force the visual flip without delay, as it's a direct DOM manipulation.
-        renderBoard(game.fen(), boardOrientation); // Pass the current game FEN and the NEW boardOrientation
-
-        // --- Now, use setTimeout to initiate the rest of the game flow ---
-        // This allows the browser a moment to paint the flip before the engine starts thinking.
-        setTimeout(() => {
-            startGameFlow(); 
-        }, 0); 
-    });
-   undoBtn.addEventListener('click', () => { 
-        if (trainingMode) {
-            if (game.history().length < 1) return; // Cannot undo if no moves
-            game.undo(); // Undo one move in human mode
-            lastMove = game.history({ verbose: true }).pop() || null; // Update last move for highlighting
-            playerColor = playerColor === 'w' ? 'b' : 'w'; // Flip player color back to reflect whose turn it is now
-        } else {
-            if (game.history().length < 2) return; // Cannot undo if less than 2 engine+human moves
-            engine.stop(); // Stop engine calculation
-            game.undo(); // Undo human move
-            game.undo(); // Undo engine move
-            lastMove = game.history({ verbose: true }).pop() || null; // Update last move for highlighting
-            engine.setPosition('fen ' + game.fen()); // Inform engine of new position after undo
-        }
-        
-        // --- NEW: Unified flow after undo ---
-        startGameFlow(); // This will re-render the board, update indicators, and request engine move if applicable
-    });
+// REPLACE with this simplified version
+undoBtn.addEventListener('click', () => {
+    if (trainingMode) {
+        if (game.history().length < 1) return;
+        game.undo();
+    } else {
+        if (game.history().length < 2) return;
+        engine.stop();
+        game.undo();
+        game.undo();
+    }
+    lastMove = game.history({ verbose: true }).pop() || null;
+    updateApplicationState(); // Tell the master function to handle the consequences
+});
     
     
    forceMoveBtn.addEventListener('click', () => { 
@@ -792,38 +789,12 @@ function applyPreset(presetName) {
     }
     saveSettings(); });// Don't forget to save settings on change });
 
-    // ADD THIS NEW, CORRECT LISTENER
-// PASTE THIS SINGLE, CORRECT LISTENER
 // PASTE THIS AS THE ONLY LISTENER FOR THE TRAINING MODE TOGGLE
-
+// REPLACE with this simplified version
 trainingModeToggle.addEventListener('change', (e) => {
-    // 1. Update the state from the checkbox's new state.
     trainingMode = e.target.checked;
-    saveSettings(); // Save the new preference.
-
-    // 2. Update the UI: Grey out the engine controls if Training Mode is ON.
-    const isEngineDisabled = trainingMode;
-    const enginePresetPanel = document.querySelector('[data-preset="defender"]')?.closest('.panel-section');
-    const engineStrengthPanel = document.getElementById('elo-slider')?.closest('.panel-section');
-    
-    [enginePresetPanel, engineStrengthPanel].forEach(panel => {
-        if (panel) {
-            panel.style.opacity = isEngineDisabled ? '0.5' : '1';
-            panel.style.pointerEvents = isEngineDisabled ? 'none' : 'auto';
-        }
-    });
-
-    // 3. Re-render the board immediately. This is crucial because it updates
-    //    which pieces are draggable.
-    //    - In Training Mode (ON): You can move pieces for whosever turn it is.
-    //    - When OFF: You can only move your own pieces.
-    renderBoard(game.fen(), boardOrientation);
-
-    // 4. If the engine was just turned ON (Training Mode OFF) and it's the 
-    //    engine's turn to move, tell it to think.
-    if (!isEngineDisabled && game.turn() !== playerColor && !game.isGameOver()) {
-        requestEngineMove();
-    }
+    saveSettings();
+    updateApplicationState(); // Tell the master function to handle the consequences
 });
     
     // Add event listeners for auto-queen and highlight moves toggles here
