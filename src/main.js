@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionStatusTextEl.textContent = 'Ready'; // Engine is ready
         connectionIndicatorEl.style.backgroundColor = 'var(--success)'; // Green for ready
 
-        if (game.turn() !== playerColor && !humanMode && !game.isGameOver()) {
+        if (game.turn() !== playerColor && !trainingMode && !game.isGameOver()) {
             requestEngineMove(true);
         }
     };
@@ -285,7 +285,7 @@ function startNewGame() {
     }
 
 function requestEngineMove(isFast = false) {
-        if (game.isGameOver() || humanMode) return;
+        if (game.isGameOver() || trainingMode) return;
         showThinking();
         engine.setPosition('fen ' + game.fen());
 
@@ -325,7 +325,7 @@ function requestEngineMove(isFast = false) {
         }
         
         // Request engine move if it's the engine's turn and not human mode or game over
-        if (game.turn() !== playerColor && !humanMode && !game.isGameOver()) {
+        if (game.turn() !== playerColor && !trainingMode && !game.isGameOver()) {
             requestEngineMove(true); // 'true' signals this is an immediate/fast first move of engine's turn
         }
             // --- NEW: Ensure full UI state is consistent when game flow starts ---
@@ -334,8 +334,8 @@ function requestEngineMove(isFast = false) {
         // --- END NEW ---
 
         // Update button states based on the new game state
-        // Undo button enabled if there's history, disabled if not (or only 1 move if humanMode)
-        undoBtn.disabled = humanMode ? game.history().length < 1 : game.history().length < 2;
+        // Undo button enabled if there's history, disabled if not (or only 1 move if trainingMode)
+        undoBtn.disabled = trainingMode ? game.history().length < 1 : game.history().length < 2;
         // Force Move button enabled only if it's the engine's turn AND not human mode AND game not over
 
         updateTurnIndicator(); // Visually indicate whose turn it is
@@ -435,7 +435,7 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
                 pieceImg.classList.add('chess-piece');
                 
                 // Make pieces draggable only for the current human player or in human vs human mode
-                if ((piece.color === playerColor && !humanMode) || (humanMode && piece.color === tempGame.turn())) {
+                if ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === tempGame.turn())) {
                     pieceImg.draggable = true; // Enable native drag for mouse
                     pieceImg.addEventListener('dragstart', handleDragStart);
                     pieceImg.addEventListener('dragend', handleDragEnd);
@@ -458,7 +458,7 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
 
 
     function handleDragStart(e) {
-        if ((game.turn() !== playerColor && !humanMode)) { e.preventDefault(); return; }
+        if ((game.turn() !== playerColor && !trainingMode)) { e.preventDefault(); return; }
         selectedSquare = e.target.parentElement.dataset.square;
         draggedPieceEl = e.target;
         e.dataTransfer.setData('text/plain', selectedSquare);
@@ -501,7 +501,7 @@ function handleDrop(e) {
 }
     function handleTouchStart(e) {
         e.preventDefault();
-        if ((game.turn() !== playerColor && !humanMode)) return;
+        if ((game.turn() !== playerColor && !trainingMode)) return;
         
         clearTimeout(dragDebounceTimeout);
         dragDebounceTimeout = setTimeout(() => {
@@ -586,7 +586,7 @@ if (!draggedPieceEl) return;
             renderBoard(game.fen(), boardOrientation); // Pass boardOrientation explicitly
         } else {
             const piece = game.get(square);
-            if (piece && ((piece.color === playerColor && !humanMode) || (humanMode && piece.color === game.turn()))) {
+            if (piece && ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === game.turn()))) {
                 selectedSquare = square;
                 renderBoard(game.fen(), boardOrientation);
             }
@@ -1074,7 +1074,7 @@ flipSwitchBtn.addEventListener('click', () => {
         }, 0); 
     });
    undoBtn.addEventListener('click', () => { 
-        if (humanMode) {
+        if (trainingMode) {
             if (game.history().length < 1) return; // Cannot undo if no moves
             game.undo(); // Undo one move in human mode
             lastMove = game.history({ verbose: true }).pop() || null; // Update last move for highlighting
@@ -1096,7 +1096,7 @@ flipSwitchBtn.addEventListener('click', () => {
    forceMoveBtn.addEventListener('click', () => { 
         // If it's the engine's turn and not human mode, force it to move.
         // This stops current calculations and makes it play the best move found so far.
-        if (game.turn() !== playerColor && !humanMode && !game.isGameOver()) {
+        if (game.turn() !== playerColor && !trainingMode && !game.isGameOver()) {
             engine.stop(); // This command usually makes Stockfish output its bestmove immediately
             // Note: engine.stop() also triggers engine.onBestMove, which will call startGameFlow() indirectly.
         }
@@ -1133,7 +1133,7 @@ function applyPreset(presetName) {
     saveSettings(); 
 
     // If it's currently the engine's turn and not human mode, make it re-evaluate
-    if (!checkGameOver() && game.turn() !== playerColor && !humanMode) {
+    if (!checkGameOver() && game.turn() !== playerColor && !trainingMode) {
          requestEngineMove(true); // Re-evaluate with new preset quickly
     }
 }
@@ -1165,10 +1165,10 @@ function applyPreset(presetName) {
     }
     saveSettings(); });// Don't forget to save settings on change });
 
-    humanModeToggle.addEventListener('change', (e) => {
-        humanMode = e.target.checked;
-        engineControls.forEach(control => control.style.opacity = humanMode ? '0.5' : '1');
-        engineControls.forEach(control => control.style.pointerEvents = humanMode ? 'none' : 'auto');
+    trainingModeToggle.addEventListener('change', (e) => {
+        trainingMode = e.target.checked;
+        engineControls.forEach(control => control.style.opacity = trainingMode ? '0.5' : '1');
+        engineControls.forEach(control => control.style.pointerEvents = trainingMode ? 'none' : 'auto');
         renderBoard(game.fen(), boardOrientation);
         saveSettings(); // Add this line
     });
@@ -1329,7 +1329,7 @@ function updateHistory() {
         });
         
         historyEl.appendChild(fragment);
-        undoBtn.disabled = humanMode ? history.length < 1 : history.length < 2;
+        undoBtn.disabled = trainingMode ? history.length < 1 : history.length < 2;
     }
 function updateCapturedPieces() {
         const initialPieceCounts = { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 }; // Added king for completeness, though it's not captured in standard play
@@ -1494,11 +1494,11 @@ function _applySettingsToUI(settings) {
     if (highlightMovesToggle) highlightMovesToggle.checked = settings.highlightMoves;
 
     // Human vs Human Mode
-    humanMode = (settings.humanMode === true);
-    humanModeToggle.checked = humanMode;
-    engineControls.forEach(control => control.style.opacity = humanMode ? '0.5' : '1');
-    engineControls.forEach(control => control.style.pointerEvents = humanMode ? 'none' : 'auto');
-    if (humanMode) { // If human mode is enabled, stop engine thinking and clear indicator
+    trainingMode = (settings.trainingMode === true);
+    trainingMode.checked = trainingMode;
+    engineControls.forEach(control => control.style.opacity = trainingMode ? '0.5' : '1');
+    engineControls.forEach(control => control.style.pointerEvents = trainingMode ? 'none' : 'auto');
+    if (trainingMode) { // If human mode is enabled, stop engine thinking and clear indicator
         engine.stop();
         hideThinking();
     }
@@ -1538,7 +1538,7 @@ function _getDefaultSettings() {
         soundEnabled: false,
         autoQueen: false,
         highlightMoves: true, // Default to true
-        humanMode: false,
+        trainingMode: false,
         trainingMode: false,
         elo: 3000, // Default ELO
         contempt: 0 // Default Contempt (balanced preset)
@@ -1553,7 +1553,7 @@ function saveSettings() {
         soundEnabled: soundToggle.checked,
         autoQueen: document.getElementById('auto-queen-toggle')?.checked || false, // Use optional chaining + fallback
         highlightMoves: document.getElementById('highlight-moves-toggle')?.checked || false,
-        humanMode: humanModeToggle.checked,
+        trainingMode: trainingMode.checked,
         trainingMode: trainingModeToggle.checked,
         elo: eloSlider.value,
         contempt: engineContempt
