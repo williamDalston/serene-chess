@@ -1179,6 +1179,36 @@
         justify-content: space-evenly;
     }
 
+    /* ADD THIS CSS FOR THE SETTINGS MODAL */
+    .settings-backdrop {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(26, 25, 21, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 299;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s;
+    }
+    .settings-backdrop.visible {
+        opacity: 1;
+        visibility: visible;
+    }
+    .settings-modal {
+        /* Remove old positioning */
+        /* position: fixed; top: 50%; left: 50%; */
+        transform: scale(0.95);
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .settings-backdrop.visible .settings-modal {
+        transform: scale(1);
+        opacity: 1;
+    }
+
 
     </style>
 </head>
@@ -1285,21 +1315,22 @@
 
 
 
+<div class="settings-backdrop" id="settings-backdrop"></div>
+    <div class="settings-modal" id="settings-modal" role="dialog" aria-labelledby="settings-title">
+       </div>
+        <div class="panel-section">
+            <h3 class="section-title" id="settings-title">Settings</h3>
 
-<div class="settings-modal" id="settings-modal" role="dialog" aria-labelledby="settings-title">
-    <div class="panel-section">
-        <h3 class="section-title" id="settings-title">Settings</h3>
-
-        <div class="toggle-group">
-            <div class="toggle-info">
-                <div class="toggle-label">Dark Mode</div>
-                <div class="toggle-description">Switch to a darker theme for night viewing.</div>
+            <div class="toggle-group">
+                <div class="toggle-info">
+                    <div class="toggle-label">Dark Mode</div>
+                    <div class="toggle-description">Switch to a darker theme for night viewing.</div>
+                </div>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="dark-mode-toggle">
+                    <span class="toggle-slider"></span>
+                </div>
             </div>
-            <div class="toggle-switch">
-                <input type="checkbox" id="dark-mode-toggle">
-                <span class="toggle-slider"></span>
-            </div>
-        </div>
 
         <div class="toggle-group">
             <div class="toggle-info">

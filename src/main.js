@@ -159,15 +159,25 @@ document.addEventListener('DOMContentLoaded', () => {
         startNewGame();
     };
     engine.onInfo = (info) => { if (info.score) updateEvaluationBar(info.score, game.turn()); };
-    // REPLACE with this simplified version
+// REPLACE with this targeted version
     engine.onBestMove = (moveStr) => {
         const move = game.move(moveStr, { sloppy: true });
+
         if (move) {
             playSound(move);
             lastMove = move;
-            updateApplicationState(); // Tell the master function to handle the consequences
+            hideThinking();
+            updateBoardAfterMove(move); // Efficiently update the board
+
+            // Update other UI elements directly
+            updateHistory();
+            updateCapturedPieces();
+            updateTurnIndicator();
+            checkGameOver();
         }
     };
+
+
     engine.onError = (err) => console.error('[ENGINE ERROR]', err);
 
 
@@ -276,7 +286,7 @@ function startNewGame() {
     engine.newGame();
     gameOverOverlay.style.display = 'none';
     updateFlipSwitchButtonText();
-    updateApplicationState(); // Tell the master function to set up the new game state
+    startGameFlow(); // Tell the master function to set up the new game state
 }
 
 function requestEngineMove(isFast = false) {
@@ -336,42 +346,7 @@ function requestEngineMove(isFast = false) {
         updateTurnIndicator(); // Visually indicate whose turn it is
     }
 
-// PASTE THIS NEW MASTER FUNCTION
-function updateApplicationState() {
-    // 1. UPDATE THE VISUAL BOARD: This is the only place a full re-render is called.
-    renderBoard(game.fen(), boardOrientation);
 
-    // 2. UPDATE ALL UI COMPONENTS
-    updateHistory();
-    updateCapturedPieces();
-    updateTurnIndicator();
-
-    // 3. UPDATE UI STATE BASED ON `trainingMode`
-    const isEngineDisabled = trainingMode;
-    const enginePresetPanel = document.querySelector('[data-preset="defender"]')?.closest('.panel-section');
-    const engineStrengthPanel = document.getElementById('elo-slider')?.closest('.panel-section');
-    [enginePresetPanel, engineStrengthPanel].forEach(panel => {
-        if (panel) {
-            panel.style.opacity = isEngineDisabled ? '0.5' : '1';
-            panel.style.pointerEvents = isEngineDisabled ? 'none' : 'auto';
-        }
-    });
-
-    // 4. CHECK FOR GAME OVER
-    if (checkGameOver()) {
-        hideThinking();
-        return; // Stop here if the game is over.
-    }
-
-    // 5. DECIDE WHAT HAPPENS NEXT (The most important logic)
-    // This is now the ONLY place in the entire app that decides if the engine should move.
-    const isEngineTurn = game.turn() !== playerColor;
-    if (!isEngineDisabled && isEngineTurn) {
-        requestEngineMove();
-    } else {
-        hideThinking();
-    }
-}
 
     function checkGameOver() {
         if (!game.isGameOver() || trainingMode) {
@@ -583,15 +558,28 @@ function dragEnd(event) {
 // --- Move Execution ---
 
 // This is the new, single function that handles all player moves.
-// REPLACE with this simplified version
+// REPLACE with this targeted version
 function handlePlayerMove(from, to) {
     const move = game.move({ from, to, promotion: 'q' });
+
     if (move) {
         playSound(move);
         lastMove = move;
-        updateApplicationState(); // Tell the master function to handle the consequences
+        updateBoardAfterMove(move); // Efficiently update the board
+
+        // Update other UI elements directly
+        updateHistory();
+        updateCapturedPieces();
+        updateTurnIndicator();
+        if (checkGameOver()) return;
+
+        // If not in training mode, request the engine's move
+        if (!trainingMode) {
+            requestEngineMove();
+        }
     } else {
-        renderBoard(game.fen(), boardOrientation); // If move is illegal, just redraw to reset selection
+        // If the move was illegal, a full render is fine to reset selection
+        renderBoard(game.fen(), boardOrientation);
     }
 }
 
@@ -701,7 +689,7 @@ flipSwitchBtn.addEventListener('click', () => {
     playerColor = (playerColor === 'w') ? 'b' : 'w';
     boardOrientation = (playerColor === 'w') ? 'white' : 'black';
     updateFlipSwitchButtonText();
-    updateApplicationState(); // Tell the master function to handle the consequences
+    startGameFlow(); // Tell the master function to handle the consequences
 });
 
 
@@ -717,7 +705,7 @@ undoBtn.addEventListener('click', () => {
         game.undo();
     }
     lastMove = game.history({ verbose: true }).pop() || null;
-    updateApplicationState(); // Tell the master function to handle the consequences
+    startGameFlow();
 });
     
     
@@ -798,7 +786,7 @@ function applyPreset(presetName) {
 trainingModeToggle.addEventListener('change', (e) => {
     trainingMode = e.target.checked;
     saveSettings();
-    updateApplicationState(); // Tell the master function to handle the consequences
+    renderBoard(game.fen(), boardOrientation);
 });
     
     // Add event listeners for auto-queen and highlight moves toggles here
@@ -828,7 +816,7 @@ trainingModeToggle.addEventListener('change', (e) => {
     darkModeToggle.addEventListener('change', (e) => { 
         document.body.classList.toggle('dark-mode', e.target.checked); 
         saveSettings(); // Add this line
-        updateApplicationState();
+        startGameFlow();
     });
 
 // REPLACE the old "Force Toggle" block with this one
@@ -849,10 +837,11 @@ document.querySelectorAll('.settings-modal .toggle-group').forEach(group => {
 });
 // --- Settings Modal Logic (replaces the three old listeners) ---
 
+// REPLACE with this new version
 function toggleSettingsModal(show) {
-    // We check for settingsModal's existence here for safety
-    if (settingsModal) {
-        settingsModal.style.display = show ? 'block' : 'none';
+    const backdrop = document.getElementById('settings-backdrop');
+    if (backdrop) {
+        backdrop.classList.toggle('visible', show);
     }
 }
 
@@ -882,8 +871,6 @@ function toggleSettingsModal(show) {
 function updateHistory() {
     if (!historyEl) return;
     historyEl.innerHTML = '';
-
-    if (isMobile && !trainingMode) return;
 
     if (isMobile && !historyEl.classList.contains('collapsed')) {
         historyEl.style.maxHeight = historyEl.scrollHeight + 'px';
