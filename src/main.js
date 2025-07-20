@@ -443,9 +443,7 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
                     pieceImg.addEventListener('dragstart', handleDragStart);
                     pieceImg.addEventListener('dragend', handleDragEnd);
                     // Add touch listeners for mobile drag
-                    pieceImg.addEventListener('touchstart', handleTouchStart, { passive: false });
-                    pieceImg.addEventListener('touchmove', handleTouchMove, { passive: false });
-                    pieceImg.addEventListener('touchend', handleTouchEnd, { passive: false });
+                    
                 }
                 squareEl.appendChild(pieceImg);
             }
