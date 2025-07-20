@@ -993,6 +993,11 @@ function animateAndFinalizeMove(move) {
             return;
         }
 
+        // --- FIX ADDED HERE ---
+        // Play the sound for the player's move
+        playSound(result);
+        // --------------------
+
         // Update lastMove for highlighting after game.move() is successful
         lastMove = result; 
 
@@ -1203,9 +1208,11 @@ function applyPreset(presetName) {
     });
 
 function updateHistory() {
+       historyEl.innerHTML = '';
+    
         if (isMobile && !trainingMode) return; // Skip history updates on mobile unless in training mode
         
-        historyEl.innerHTML = '';
+        
 
         // If the panel is currently open on mobile and content changes, adjust max-height
         if (isMobile && !historyEl.classList.contains('collapsed')) {
