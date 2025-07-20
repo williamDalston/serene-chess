@@ -282,7 +282,7 @@ if (moveHistoryToggleEl) {
 // REPLACE startNewGame and startGameFlow with this
 function startNewGame() {
     const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) loadingOverlay.classList.remove('hidden'); // <-- ADD THIS
+   if (loadingOverlay) loadingOverlay.classList.remove('hidden'); // <-- ADD THIS
     game.reset();
     lastMove = null;
     engine.stop();
@@ -711,6 +711,8 @@ flipSwitchBtn.addEventListener('click', () => {
 
 // REPLACE with this simplified version
 // PASTE THIS CORRECTED VERSION
+// This is your current, buggy version
+// PASTE THIS CORRECTED VERSION
 undoBtn.addEventListener('click', () => {
     if (trainingMode) {
         if (game.history().length < 1) return;
@@ -866,138 +868,68 @@ document.querySelectorAll('.settings-modal .toggle-group').forEach(group => {
 });
 
 
-// --- Settings Modal Logic ---
+// PASTE THIS ENTIRE BLOCK
 
-// Helper function to clear board highlights
-function clearHighlights() {
-    document.querySelectorAll('.selected, .possible-move').forEach(el => {
-        el.classList.remove('selected', 'possible-move');
+// --- Settings Modal and Training Toggle Logic ---
+
+const settingsBackdrop = document.getElementById('settings-backdrop');
+
+// Listener for the gear icon to OPEN the modal
+if (settingsIcon) {
+    settingsIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (settingsBackdrop) settingsBackdrop.classList.add('visible');
     });
 }
 
-// Main function to show/hide the settings modal
-function toggleSettingsModal(show) {
-    const backdrop = document.getElementById('settings-backdrop');
-    if (backdrop) {
-        backdrop.classList.toggle('visible', show);
-        
-        // Add/remove body scroll lock when modal is open
-        document.body.style.overflow = show ? 'hidden' : '';
-        
-        // Focus management for accessibility
-        if (show) {
-            const modal = document.getElementById('settings-modal');
-            if (modal) modal.focus();
-        }
-    }
-}
-
-// Apply settings from toggle states
-
-// Initialize settings modal when DOM is loaded
-function initializeSettingsModal() {
-    // Get all necessary elements
-    const settingsIcon = document.getElementById('settings-icon'); // Replace with your actual gear icon ID
-    const settingsModal = document.getElementById('settings-modal');
-    const closeSettingsBtn = document.getElementById('close-settings');
-    const resetSettingsBtn = document.getElementById('reset-settings');
-    
-    // Toggle elements
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    const soundToggle = document.getElementById('sound-toggle');
-    const highlightMovesToggle = document.getElementById('highlight-moves-toggle');
-    
-     
-    // Apply initial settings
-    
-    // 1. Listener for the gear icon to open the modal
-    if (settingsIcon) {
-        settingsIcon.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleSettingsModal(true);
-        });
-    }
-    
-    // 2. Listener for the "Close" button inside the modal
-    if (closeSettingsBtn) {
-        closeSettingsBtn.addEventListener('click', () => {
-            toggleSettingsModal(false);
-        });
-    }
-    
-    // 3. Listener for the "Reset" button
-    if (resetSettingsBtn) {
-        resetSettingsBtn.addEventListener('click', () => {
-            // Reset all toggles to default state
-            if (darkModeToggle) darkModeToggle.checked = false;
-            if (soundToggle) soundToggle.checked = false;
-            if (highlightMovesToggle) highlightMovesToggle.checked = true;
-            
-            // Apply the reset settings
-            applySettings();
-        });
-    }
-    
-    // 4. Listeners for toggle changes
-// CHANGE the listeners to call saveSettings
-    if (darkModeToggle) {
-        darkModeToggle.addEventListener('change', saveSettings);
-    }
-    if (soundToggle) {
-        soundToggle.addEventListener('change', saveSettings);
-    }
-    if (highlightMovesToggle) {
-        highlightMovesToggle.addEventListener('change', saveSettings);
-    }
-    
-    // 5. Listener to prevent clicks inside the modal from closing it
-    if (settingsModal) {
-        settingsModal.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-    
-    // 6. Listener on the backdrop to close modal when clicking outside
-    const backdrop = document.getElementById('settings-backdrop');
-    if (backdrop) {
-        backdrop.addEventListener('click', (e) => {
-            // Only close if clicking the backdrop itself, not its contents
-            if (e.target === backdrop) {
-                toggleSettingsModal(false);
-            }
-        });
-    }
-    
-    // 7. Keyboard accessibility - close modal with Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const backdrop = document.getElementById('settings-backdrop');
-            if (backdrop && backdrop.classList.contains('visible')) {
-                toggleSettingsModal(false);
-            }
-        }
+// Listener for the backdrop itself to CLOSE the modal
+if (settingsBackdrop) {
+    settingsBackdrop.addEventListener('click', () => {
+        settingsBackdrop.classList.remove('visible');
     });
 }
 
-// Helper function to check if sound effects are enabled
-function isSoundEnabled() {
-    return window.gameSettings && window.gameSettings.soundEffects;
+// Listener to prevent clicks *inside* the modal from closing it
+if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => e.stopPropagation());
 }
 
-// Helper function to check if move highlighting is enabled
-function isHighlightMovesEnabled() {
-    return window.gameSettings && window.gameSettings.highlightMoves;
+// Listener for the "Close" button inside the modal
+const closeSettingsBtn = document.getElementById('close-settings');
+if (closeSettingsBtn) {
+    closeSettingsBtn.addEventListener('click', () => {
+        if (settingsBackdrop) settingsBackdrop.classList.remove('visible');
+    });
 }
 
-// Helper function to play sound effects (if enabled)
-function playSound(soundType) {
-    if (!isSoundEnabled()) return;
-    
-    // You can implement actual sound playing here
-    // For example: new Audio(`sounds/${soundType}.mp3`).play();
-    console.log(`Playing sound: ${soundType}`);
-}
+// The definitive listener for the Training Mode Toggle
+trainingModeToggle.addEventListener('change', (e) => {
+    // 1. Update the state from the checkbox.
+    trainingMode = e.target.checked;
+    saveSettings();
 
+    // 2. Update the UI (grey out engine controls).
+    const isEngineDisabled = trainingMode;
+    const enginePanels = [
+        document.querySelector('[data-preset="defender"]')?.closest('.panel-section'),
+        document.getElementById('elo-slider')?.closest('.panel-section')
+    ].filter(Boolean);
+
+    enginePanels.forEach(panel => {
+        panel.style.opacity = isEngineDisabled ? '0.5' : '1';
+        panel.style.pointerEvents = isEngineDisabled ? 'none' : 'auto';
+    });
+
+    // 3. Re-render the board to update which pieces are draggable.
+    renderBoard(game.fen(), boardOrientation);
+
+    // 4. If the engine was just turned ON, check if it needs to move.
+    if (!isEngineDisabled && game.turn() !== playerColor && !game.isGameOver()) {
+        requestEngineMove();
+    }
+});
+
+// --- End of Combined Logic ---
 
 function updateHistory() {
     if (!historyEl) return;
