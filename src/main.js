@@ -153,9 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionIndicatorEl.style.backgroundColor = 'var(--success)'; // Green for ready
 
         startNewGame();
-        if (game.turn() !== playerColor && !trainingMode && !game.isGameOver()) {
-            requestEngineMove(true);
-        }
     };
     engine.onInfo = (info) => { if (info.score) updateEvaluationBar(info.score, game.turn()); };
     engine.onBestMove = (moveStr) => {
@@ -1038,6 +1035,7 @@ function hideThinking() {
     }
 
 // Helper to apply settings to UI and variables. Does NOT interact with localStorage directly.
+// PASTE THIS CORRECTED VERSION
 // PASTE THIS CORRECTED VERSION
 function _applySettingsToUI(settings) {
     // Dark Mode
