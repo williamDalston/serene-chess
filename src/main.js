@@ -461,26 +461,29 @@ function handleDrop(e) {
 
     const toSquare = e.currentTarget.dataset.square;
 
-    // IMPORTANT: Clean up the drag state like handleTouchEnd does
+    // --- FIX for removeChild: Conditionally remove draggedPieceEl from body ---
+    // Restore original piece's appearance (relevant for touch, harmless for mouse)
     const originalPieceEl = document.querySelector(`[data-square="${selectedSquare}"] .chess-piece`);
     if (originalPieceEl) {
-        originalPieceEl.style.opacity = '1'; // Make original piece visible again
-        originalPieceEl.style.cursor = 'grab'; // Reset cursor
+        originalPieceEl.style.opacity = '1';
+        originalPieceEl.style.cursor = 'grab';
     }
 
-    // Remove any cloned dragged piece if it exists (relevant if a custom drag image was created)
-    // Note: For native mouse drag, draggedPieceEl might be the original element, so removal logic might differ.
-    // However, if draggedPieceEl is ONLY set for touch, this check handles it safely.
-    if (draggedPieceEl && document.body.contains(draggedPieceEl)) {
+    // Only attempt to remove draggedPieceEl from body IF it was actually appended there (i.e., for touch)
+    // For native mouse drag, draggedPieceEl usually refers to the original piece, which is not in body.
+    if (draggedPieceEl && draggedPieceEl.parentNode === document.body) {
         document.body.removeChild(draggedPieceEl);
-        draggedPieceEl = null; // Reset for future drags
+        draggedPieceEl = null; // Clear the reference
+    } else if (draggedPieceEl) { // If it's not a child of body, but still referenced (e.g., original piece for mouse)
+        draggedPieceEl.classList.remove('dragging'); // Just remove the 'dragging' class
+        draggedPieceEl = null; // Clear reference
     }
+    // --- END FIX ---
 
     if (selectedSquare && toSquare && selectedSquare !== toSquare) {
         attemptMove(selectedSquare, toSquare);
     } else {
-        // Clear selected square and re-render if no valid move
-        selectedSquare = null; // << Ensure selectedSquare is cleared here too
+        selectedSquare = null; 
         renderBoard(game.fen(), boardOrientation);
     }
 }
@@ -1541,7 +1544,7 @@ document.body.addEventListener('click', () => {
 
         // --- Initialize synth here, AFTER AudioContext is started ---
         // Now that Tone.context is initialized, it's safe to create instruments.
-        const synth = new Tone.Synth().toDestination();
+        let synth = new Tone.Synth().toDestination(); // CHANGED TO 'let'
 
         // Define the play sound function that uses the *locally* created synth.
         // We'll expose it globally for the `playSound` wrapper function.
