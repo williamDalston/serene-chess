@@ -342,6 +342,8 @@
             transition: background-color 0.3s ease, border-color 0.3s ease; 
         }
         
+
+
         .section-title { 
             font-size: 1.125rem; 
             font-weight: 500; 
@@ -449,6 +451,10 @@
         .btn-primary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent-soft); }
         
 /* Find and replace the .move-history CSS block */
+.settings-modal { pointer-events:none }
+.settings-backdrop.visible .settings-modal { pointer-events:auto }
+
+
 .move-history {
     max-height: 250px;
     overflow-y: auto;
@@ -702,7 +708,7 @@
             left: 50%; 
             transform: translate(-50%, -50%); 
             z-index: 300; 
-            display: none; 
+            display: block; 
             width: 90%; 
             max-width: 320px; 
         }
@@ -1198,44 +1204,34 @@
     }
 
 /* Ensure your modal CSS matches this block */
-/* Modal backdrop */
+/* hide by default */
 .settings-backdrop {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(26,25,21,0.7);
   backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 299;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 999;
 }
 .settings-backdrop.visible {
-  opacity: 1;
-  visibility: visible;
+  display: flex;
 }
 
-/* Modal container */
 .settings-modal {
   background: var(--surface);
   box-shadow: var(--shadow-elevated);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
-  width: min(90vw, 400px);    /* up to 400px, but at most 90% viewport width */
-  max-width: 100%;            /* never overflow horizontally */
-  max-height: 80vh;           /* stay within 80% of viewport height */
-  overflow-y: auto;           /* scroll if content exceeds max-height */
-  transform: translateY(0) scale(1);
-  opacity: 1;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  width: min(90vw,400px);
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
-
 .settings-backdrop.visible .settings-modal {
-  transform: translateY(0) scale(1);
+  transform: scale(1);
   opacity: 1;
-  pointer-events: auto;
 }
 
 
@@ -1302,31 +1298,32 @@
 
 <aside class="side-panel">
   <section class="panel-section">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-lg);">
-      <h3 class="section-title" style="margin-bottom:0; font-weight:600;">Controls</h3>
-      <span
-        class="settings-icon"
-        id="settings-icon"
-        role="button"
-        tabindex="0"
-        aria-label="Settings"
-        style="font-size:1.25rem; cursor:pointer;"
-      >⚙️</span>
-    </div>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-lg);">
+    <h3 class="section-title" style="margin-bottom:0; font-weight:600;">Controls</h3>
+    <span
+      class="settings-icon"
+      id="settings-icon"
+      role="button"
+      tabindex="0"
+      aria-label="Settings"
+      style="font-size:1.25rem; cursor:pointer;"
+    >⚙️</span>
+  </div>
 
-    <div class="toggle-group" style="padding:var(--space-md);">
-      <div class="toggle-info">
-        <div class="toggle-label" style="font-weight:600;">Training Mode</div>
-        <div class="toggle-description" style="font-size:0.875rem;">
-          Disable the engine to control both sides.
-        </div>
+  <div class="toggle-group" style="padding:var(--space-md);">
+    <div class="toggle-info">
+      <div class="toggle-label" style="font-weight:600;">Training Mode</div>
+      <div class="toggle-description" style="font-size:0.875rem;">
+        Disable the engine to control both sides.
       </div>
-      <label class="toggle-switch" style="margin-left:auto;">
-        <input type="checkbox" id="training-mode-toggle">
-        <span class="toggle-slider"></span>
-      </label>
     </div>
-  </section>
+    <label class="toggle-switch" style="margin-left:auto;">
+      <input type="checkbox" id="training-mode-toggle">
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+</section>
+
 
   <section class="panel-section">
     <h3 class="section-title">Engine Presets</h3>

@@ -628,12 +628,19 @@ function updateBoardAfterMove(move) {
 // REPLACE your old onSquareClick with this efficient version
 function onSquareClick(square) {
     // If a piece was already selected, this click is a move attempt.
-    if (selectedSquare) {
-        handlePlayerMove(selectedSquare, square);
-        selectedSquare = null;
-        clearHighlights();
-        return;
-    }
+if (selectedSquare) {
+     handlePlayerMove(selectedSquare, square);
+    selectedSquare = null;
+    clearHighlights?.();   // guard
+     return;
+ }
+
+ // simple helper
+function clearHighlights() {
+  document
+    .querySelectorAll('.selected,.possible-move')
+    .forEach(el => el.classList.remove('selected','possible-move'));
+}
 
     // Otherwise, this is the first click (a selection attempt).
     clearHighlights(); // Clear any previous selection
@@ -1222,6 +1229,8 @@ function loadSettings() {
     saveSettings(); 
 }
 
+
+
     // --- Initialization (runs once, after a user gesture for audio) ---
 // Find and replace the entire body click listener at the end of the file
     document.body.addEventListener('click', async () => {
@@ -1248,5 +1257,7 @@ function loadSettings() {
         console.error('Failed to initialize engine:', err);
         if (connectionStatusTextEl) connectionStatusTextEl.textContent = 'Engine load failed';
     }
+
+    
 
 });
