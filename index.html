@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Serene Chess</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" href="/favicon.ico">
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-        
+        /* Add this line */
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600&display=swap');
         :root {
             /* Light Mode Colors */
             --bg-primary: #faf9f7;
@@ -427,18 +429,34 @@
         .btn-primary { background: var(--accent-warm); color: white; border-color: var(--accent-warm); }
         .btn-primary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent-soft); }
         
-        .move-history { 
-            max-height: 250px; 
-            overflow-y: auto; 
-            font-family: 'SF Mono', monospace; 
-            font-size: 0.9rem; 
-            line-height: 1.8; 
-            padding: var(--space-sm); 
-            background: var(--bg-secondary); 
-            border-radius: var(--radius-sm); 
-            border: var(--border-soft);
-            -webkit-overflow-scrolling: touch;
-        }
+/* Find and replace the .move-history CSS block */
+.move-history {
+    max-height: 250px;
+    overflow-y: auto;
+    font-family: 'Lora', serif; /* Use the new elegant font */
+    font-size: 1rem;
+    line-height: 1.7;
+    background: var(--bg-primary); /* A soft, paper-like color */
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 4px; /* A sharper corner, like paper */
+    padding: var(--space-lg);
+    -webkit-overflow-scrolling: touch;
+
+    /* The 3D "pop" effect */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transform: perspective(1000px) rotateY(-1.5deg); /* Slight angle */
+    box-shadow: 
+        0 2.8px 2.2px rgba(0, 0, 0, 0.02),
+        0 6.7px 5.3px rgba(0, 0, 0, 0.028),
+        0 12.5px 10px rgba(0, 0, 0, 0.035),
+        0 22.3px 17.9px rgba(0, 0, 0, 0.042),
+        0 41.8px 33.4px rgba(0, 0, 0, 0.05),
+        0 100px 80px rgba(0, 0, 0, 0.07);
+}
+
+.move-history:hover {
+    transform: perspective(1000px) rotateY(0deg) translateY(-2px); /* Lifts and flattens on hover */
+}
         
         .collapsible-title {
             cursor: pointer;
@@ -484,23 +502,36 @@
             }
         }
 
-        .move-pair { 
-            display: grid; 
-            grid-template-columns: 40px 1fr 1fr; 
-            gap: var(--space-sm); 
-            padding: var(--space-xs) var(--space-sm); 
-            border-radius: var(--radius-sm); 
-            transition: background 0.2s ease; 
-            cursor: pointer;
-            min-height: 36px;
-            align-items: center;
-        }
-        
-        .move-pair:hover { background: var(--square-possible); }
-        .move-pair:active { transform: scale(0.98); }
-        .move-number { color: var(--text-tertiary); font-weight: 500; }
-        .move { color: var(--text-secondary); }
-        
+/* Find and replace these rules */
+.move-pair {
+    display: grid;
+    grid-template-columns: 40px 1fr 1fr;
+    gap: var(--space-md);
+    border-bottom: 1px solid rgba(0,0,0,0.04); /* Subtle separator */
+    padding: var(--space-xs) 0;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    }
+
+    .move-pair:last-child {
+        border-bottom: none; /* Remove separator from the last item */
+    }
+
+    .move-pair:hover {
+        background-color: rgba(0,0,0,0.02); /* Very subtle hover */
+    }
+
+    .move-number {
+        color: var(--text-tertiary);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+
+    .move {
+        color: var(--text-primary);
+        font-weight: 600; /* Bolder text for the new font */
+    }
+            
         .thinking-indicator { 
             display: none; 
             align-items: center; 
@@ -1039,7 +1070,7 @@
                 <div class="move-history collapsible-content" id="move-history">
                     </div>
             </section>
-                    <div class="move-history" id="move-history" role="log" aria-live="polite" aria-label="Game moves">
+                    
                         <div class="move-pair">
                             <span class="move-number">1.</span>
                             <span class="move">e4</span>
@@ -1059,12 +1090,6 @@
             <div class="panel-section">
                 <h3 class="section-title" id="settings-title">Settings</h3>
                 <div class="toggle-group">
-                    <label for="dark-mode-toggle">Dark Mode</label>
-                    <div class="toggle-switch">
-                        <input type="checkbox" id="dark-mode-toggle">
-                        <span class="toggle-slider"></span>
-                    </div>
-                </div>
         <div class="toggle-group">
             <label for="sound-toggle">Sound Effects</label>
             <div class="toggle-switch">
