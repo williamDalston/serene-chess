@@ -678,59 +678,52 @@ async function attemptMove(from, to) {
     }
 
     // Enhanced animation sequence with contextual easing
-    function startDelightfulAnimation(flyingPiece, fromRect, toRect, move, result) {
-        // Double requestAnimationFrame for smoother start (ensures DOM is painted before animation)
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                // Ensure board is rendered with piece in new position (but hidden)
-                renderBoard(game.fen(), boardOrientation);
-
-                const newToEl = document.querySelector(`[data-square="${move.to}"]`);
-                const newPieceEl = newToEl?.querySelector('.chess-piece');
-                if (newPieceEl) newPieceEl.style.visibility = 'hidden'; // Keep new piece hidden until animation ends
-
-                const dx = toRect.left - fromRect.left;
-                const dy = toRect.top - fromRect.top;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const duration = calculateContextualDuration(distance, result);
-                const easing = selectContextualEasing(result);
-
-                // Create the main movement animation
-                const moveAnimation = flyingPiece.animate([
-                    { // Keyframe 0: Starting state
-                        transform: 'scale(1.02) translate(0, 0)', // Slightly scaled, no translation
-                        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
-                    },
-                    { // Keyframe 1: Nearing destination (80% of animation)
-                        transform: `scale(1) translate(${dx}px, ${dy}px)`, // Back to normal scale, translated
-                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
-                        offset: 0.8 // Landing preparation starts at 80% of duration
-                    },
-                    { // Keyframe 2: Final landing state (slightly squashed)
-                        transform: `scale(0.98) translate(${dx}px, ${dy}px)`, // Slightly squashed
-                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
-                    }
-                ], {
-                    duration,
-                    easing,
-                    fill: 'forwards' // Keep the final state
-                });
-
-                // Add special effects during animation (e.g., particles, glows)
-                addMoveSpecialEffects(flyingPiece, result, duration);
-
-                // Define what happens when the animation finishes or is cancelled
-                moveAnimation.onfinish = () => {
-                    finalizeMoveWithDelight(flyingPiece, newPieceEl, move, result, newToEl);
-                };
-                moveAnimation.oncancel = () => {
-                    console.warn('Animation cancelled'); // Should not happen often
-                    finalizeMoveWithDelight(flyingPiece, newPieceEl, move, result, newToEl); // Cleanup even if cancelled
-                };
-            });
-        });
+// Enhanced animation sequence with contextual easing
+function startDelightfulAnimation(flyingPiece, fromRect, toRect, move, result) {
+    // --- MODIFIED: No longer re-renders the whole board ---
+    // If the move is a capture, find and hide the piece on the destination square.
+    if (result.captured) {
+        const capturedPieceEl = document.querySelector(`[data-square="${move.to}"] .chess-piece`);
+        if (capturedPieceEl) {
+            // Hide the captured piece so the flying piece can land on an empty square
+            capturedPieceEl.style.visibility = 'hidden';
+        }
     }
 
+    // Double requestAnimationFrame for smoother start
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const dx = toRect.left - fromRect.left;
+            const dy = toRect.top - fromRect.top;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const duration = calculateContextualDuration(distance, result);
+            const easing = selectContextualEasing(result);
+
+            const moveAnimation = flyingPiece.animate([
+                { transform: 'scale(1.02) translate(0, 0)', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' },
+                { transform: `scale(1) translate(${dx}px, ${dy}px)`, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))', offset: 0.8 },
+                { transform: `scale(0.98) translate(${dx}px, ${dy}px)`, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }
+            ], {
+                duration,
+                easing,
+                fill: 'forwards'
+            });
+
+            addMoveSpecialEffects(flyingPiece, result, duration);
+
+            moveAnimation.onfinish = () => {
+                // Pass null for newPieceEl since we aren't creating it here anymore
+                const destinationSquareEl = document.querySelector(`[data-square="${move.to}"]`);
+                finalizeMoveWithDelight(flyingPiece, null, move, result, destinationSquareEl);
+            };
+            moveAnimation.oncancel = () => {
+                console.warn('Animation cancelled');
+                const destinationSquareEl = document.querySelector(`[data-square="${move.to}"]`);
+                finalizeMoveWithDelight(flyingPiece, null, move, result, destinationSquareEl);
+            };
+        });
+    });
+}
     // Add special visual effects during the move (e.g., capture particles, check glow)
     function addMoveSpecialEffects(flyingPiece, result, duration) {
         // Capture effect - add impact particles
@@ -814,54 +807,46 @@ async function attemptMove(from, to) {
     }
 
     // Handles finalization of move animation and landing effects
-    function finalizeMoveWithDelight(flyingPiece, destinationPiece, move, result, destinationSquareEl) { // Renamed param for clarity
-        try {
-            // Landing impact effect on the destination square
-            if (destinationSquareEl) {
-                destinationSquareEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.squareHighlightDuration}ms ease-out`;
-                destinationSquareEl.style.transform = 'scale(0.95)'; // Slight squash effect on landing
+// Handles finalization of move animation and landing effects
+function finalizeMoveWithDelight(flyingPiece, destinationPiece, move, result, destinationSquareEl) {
+    try {
+        // Landing impact effect on the destination square
+        if (destinationSquareEl) {
+            destinationSquareEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.squareHighlightDuration}ms ease-out`;
+            destinationSquareEl.style.transform = 'scale(0.95)';
 
-                setTimeout(() => {
-                    destinationSquareEl.style.transform = 'scale(1)'; // Return to normal size
-                    setTimeout(() => {
-                        destinationSquareEl.style.transition = 'none'; // Remove transition to prevent future interference
-                    }, ANIMATION_CONFIG.feedback.squareHighlightDuration);
-                }, 50); // Small delay for effect to start
-            }
-
-            // Cleanup the temporary flying piece
-            flyingPiece.style.willChange = 'auto'; // Remove optimization hint
-            if (flyingPiece.parentNode) { // Check if it's still in the DOM before removing
-                document.body.removeChild(flyingPiece);
-            }
-
-            // Reveal destination piece with a satisfying pop/bounce
-            if (destinationPiece) {
-                destinationPiece.style.visibility = 'visible'; // Make the actual piece visible
-                destinationPiece.style.transform = 'scale(0.8)'; // Start slightly smaller
-                destinationPiece.style.transition = `transform ${ANIMATION_CONFIG.feedback.pieceLifeDuration * 1.5}ms cubic-bezier(0.34, 1.56, 0.64, 1)`; // Bounce transition
-
-                requestAnimationFrame(() => {
-                    destinationPiece.style.transform = 'scale(1)'; // Pop to normal size
-                    setTimeout(() => {
-                        destinationPiece.style.transition = 'none'; // Remove transition
-                    }, ANIMATION_CONFIG.feedback.pieceLifeDuration * 1.5);
-                });
-            }
-
-            // Add special landing effects (e.g., check pulse, capture shake)
-            addLandingEffects(result, destinationSquareEl);
-
-            // Continue game flow after a brief satisfying pause for effects
             setTimeout(() => {
-                updateGameAfterMove(move, result);
-            }, 50); // Small delay before next action (e.g. engine move)
-
-        } catch (error) {
-            console.error('Error in finalizeMoveWithDelight:', error);
-            updateGameAfterMove(move, result); // Fallback to continue game flow even if animation errors
+                destinationSquareEl.style.transform = 'scale(1)';
+                setTimeout(() => {
+                    destinationSquareEl.style.transition = 'none';
+                }, ANIMATION_CONFIG.feedback.squareHighlightDuration);
+            }, 50);
         }
+
+        // Cleanup the temporary flying piece
+        if (flyingPiece.parentNode) {
+            document.body.removeChild(flyingPiece);
+        }
+
+        // Add special landing effects (e.g., check pulse, capture shake)
+        addLandingEffects(result, destinationSquareEl);
+
+        // --- THE KEY CHANGE ---
+        // Render the final board state cleanly *after* all animations are complete.
+        // This replaces the old pop-in effect and is much smoother.
+        renderBoard(game.fen(), boardOrientation);
+
+        // Continue game flow after a brief satisfying pause for effects
+        setTimeout(() => {
+            updateGameAfterMove(move, result);
+        }, 50);
+
+    } catch (error) {
+        console.error('Error in finalizeMoveWithDelight:', error);
+        renderBoard(game.fen(), boardOrientation); // Still render on error
+        updateGameAfterMove(move, result); // Fallback to continue game flow
     }
+}
 
     // Add special effects when piece lands
     function addLandingEffects(result, destinationSquareEl) { // Renamed param for clarity
