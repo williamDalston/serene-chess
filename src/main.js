@@ -143,6 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
     engine.onReady = () => {
         engine.setOption('UCI_LimitStrength', true);
         loadSettings(); // Load saved settings (including ELO and contempt) AFTER engine is ready.
+                // --- CRITICAL FIX: Apply loaded/default ELO and Contempt to the engine here ---
+        // These values (`engineElo`, `engineContempt`) are now correctly set by `loadSettings()`.
+        engine.setOption('UCI_Elo', engineElo);
+        engine.setOption('Contempt', engineContempt);
+        // --- END CRITICAL FIX ---
+        
         connectionStatusTextEl.textContent = 'Ready'; // Engine is ready
         connectionIndicatorEl.style.backgroundColor = 'var(--success)'; // Green for ready
 
@@ -1399,20 +1405,6 @@ function hideThinking() {
         });
     }
 
-    function saveSettings() {
-        const settings = {
-            darkMode: darkModeToggle.checked,
-            soundEnabled: soundToggle.checked,
-            autoQueen: document.getElementById('auto-queen-toggle').checked, // Assuming you have this
-            highlightMoves: document.getElementById('highlight-moves-toggle').checked, // Assuming you have this
-            humanMode: humanModeToggle.checked,
-            trainingMode: trainingModeToggle.checked,
-            elo: eloSlider.value, // Also save ELO
-            contempt: engineContempt // And contempt
-        };
-        localStorage.setItem('sereneChessSettings', JSON.stringify(settings));
-    }
-
 // Helper to apply settings to UI and variables. Does NOT interact with localStorage directly.
 function _applySettingsToUI(settings) {
     // Dark Mode
@@ -1517,26 +1509,24 @@ function loadSettings() {
     if (savedSettingsString) {
         try {
             const parsedSettings = JSON.parse(savedSettingsString);
-            // Check version for compatibility
             if (parsedSettings.version === SETTINGS_VERSION) {
-                // Merge loaded settings with defaults to pick up any new properties
-                // or ensure all properties exist. Defaults will fill missing values.
                 settings = { ...settings, ...parsedSettings };
+                console.log('Settings loaded:', settings);
             } else {
                 console.warn(`Settings version mismatch. Saved: ${parsedSettings.version || 'none'}, Current: ${SETTINGS_VERSION}. Applying default settings.`);
-                // If version mismatch, defaults will be used, and then saved (effectively resetting)
             }
         } catch (error) {
-            console.error("Error parsing saved settings, clearing and applying defaults:", error);
-            // If parsing fails (corrupted data), defaults will be used.
+            console.error("Error parsing saved settings, applying defaults:", error);
         }
     }
 
     _applySettingsToUI(settings); // Apply whatever settings we ended up with (loaded or default) to UI
 
-    // If we loaded old or no settings, save the current default/merged state with the new version.
-    // This cleans up stale data in localStorage for future loads.
-    saveSettings(); // Ensure localStorage is updated with the current, valid settings and version
+    // No direct engine.setOption here. engine.onReady will handle initial engine setup.
+    // When applyPreset or updateElo are called later, they will call engine.setOption.
+
+    // Ensure localStorage is updated with current valid settings (and the latest version)
+    saveSettings(); 
 }
 
     // --- Initialization (runs once, after a user gesture for audio) ---
