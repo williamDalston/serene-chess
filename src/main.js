@@ -909,7 +909,6 @@ function initializeSettingsModal() {
     
      
     // Apply initial settings
-    applySettings();
     
     // 1. Listener for the gear icon to open the modal
     if (settingsIcon) {
