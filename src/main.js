@@ -68,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastMove = null;
     let engineElo = 1800;
     let engineContempt = 0;
-    let humanMode = false;
     let soundEnabled = false;
     let trainingMode = false;
     let forceMoveTimeout;
@@ -106,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsIcon = document.getElementById('settings-icon');
     const settingsModal = document.getElementById('settings-modal');
     const resetSettingsBtn = document.getElementById('reset-settings');
-    const humanModeToggle = document.getElementById('human-mode-toggle');
     const trainingModeToggle = document.getElementById('training-mode-toggle');
     const soundToggle = document.getElementById('sound-toggle');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -1106,6 +1104,16 @@ flipSwitchBtn.addEventListener('click', () => {
         forceMoveBtn.disabled = true;
     });
 
+        // --- Add this entire block to fix the preset buttons ---
+    presetButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const presetName = button.dataset.preset;
+            if (presetName) {
+                applyPreset(presetName);
+            }
+        });
+    });
+
 function applyPreset(presetName) {
     const preset = PRESETS[presetName];
     if (!preset) return;
@@ -1192,10 +1200,19 @@ function applyPreset(presetName) {
         document.body.classList.toggle('dark-mode', e.target.checked); 
         saveSettings(); // Add this line
     });
-    trainingModeToggle.addEventListener('change', (e) => { 
-        trainingMode = e.target.checked; 
-        saveSettings(); // Add this line
+// --- Replace the old trainingModeToggle listener with this ---
+trainingModeToggle.addEventListener('change', (e) => {
+    trainingMode = e.target.checked;
+
+    // Disable engine controls when training mode is on
+    engineControls.forEach(control => {
+        control.style.opacity = trainingMode ? '0.5' : '1';
+        control.style.pointerEvents = trainingMode ? 'none' : 'auto';
     });
+
+    renderBoard(game.fen(), boardOrientation);
+    saveSettings();
+});
 
 // REPLACE the old "Force Toggle" block with this one
 // --- Enhanced Toggle Interaction for Mobile ---

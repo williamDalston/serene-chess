@@ -746,6 +746,40 @@
             border-color: var(--accent-light);
         }
 
+        /* --- Styling Enhancements --- */
+
+        /* Add more defined borders to sections */
+        .panel-section {
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        .dark-mode .panel-section {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        /* Make preset buttons feel snappier */
+        .preset-group .btn:active:not(:disabled) {
+            transform: translateY(0) scale(0.96); /* More noticeable press effect */
+        }
+
+        /* Make the engine slider easier to grab and use on mobile */
+        input[type="range"]::-webkit-slider-thumb {
+            width: 28px; /* Larger touch target */
+            height: 28px;
+            transition: transform 0.2s ease;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 28px; /* Larger touch target */
+            height: 28px;
+            transition: transform 0.2s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.1); /* Grow thumb when sliding */
+        }
+        input[type="range"]::-moz-range-thumb:active {
+            transform: scale(1.1); /* Grow thumb when sliding */
+        }
+
+
         .toggle-info {
             margin-right: 16px;
         }
@@ -816,6 +850,14 @@
         }
 
         /* Fullscreen mobile layout */
+
+        @media (max-width: 768px) {
+            .board-area {
+                width: 95%; /* Prevents the board from touching screen edges */
+            }
+        }
+
+
         @media (max-width: 1024px) {
             .game-layout { 
                 flex-direction: column; 
@@ -1129,37 +1171,50 @@
                 </div>
             </div>
 
-            <aside class="side-panel">
-                <section class="panel-section">
-                    <h3 class="section-title">Engine Presets</h3>
-                    <div class="preset-group">
-                        <button type="button" class="btn" data-preset="defender" title="Defender: Cautious and solid.">Defender</button>
-                        <button type="button" class="btn active" data-preset="balanced" title="Balanced: A neutral, well-rounded style.">Balanced</button>
-                        <button type="button" class="btn" data-preset="aggressor" title="Aggressor: Prefers attacking and complications.">Aggressor</button>
-                    </div>
-                </section>
+<aside class="side-panel">
+    <section class="panel-section">
+        <div class="toggle-group">
+            <div class="toggle-info">
+                <div class="toggle-label">Training Mode</div>
+                <div class="toggle-description">Disable the engine to control both sides.</div>
+            </div>
+            <div class="toggle-switch">
+                <input type="checkbox" id="training-mode-toggle">
+                <span class="toggle-slider"></span>
+            </div>
+        </div>
+    </section>
 
-                <section class="panel-section">
-                    <h3 class="section-title">Engine Strength</h3>
-                    <div class="slider-container">
-                        <input type="range" id="elo-slider" min="1200" max="3000" value="1800" step="50">
-                        <div class="slider-labels">
-                            <span>Beginner</span>
-                            <span id="elo-label-current">Expert</span>
-                            <span>Grandmaster</span>
-                        </div>
-                    </div>
-                </section>
+    <section class="panel-section">
+        <h3 class="section-title">Engine Presets</h3>
+        <div class="preset-group">
+            <button type="button" class="btn" data-preset="defender" title="Defender: Cautious and solid.">Defender</button>
+            <button type="button" class="btn active" data-preset="balanced" title="Balanced: A neutral, well-rounded style.">Balanced</button>
+            <button type="button" class="btn" data-preset="aggressor" title="Aggressor: Prefers attacking and complications.">Aggressor</button>
+        </div>
+    </section>
 
-                <section class="panel-section">
-                    <h3 class="section-title collapsible-title" id="move-history-toggle">
-                        <span>Move History</span>
-                        <span class="toggle-arrow">▼</span>
-                    </h3>
-                    <div class="move-history collapsible-content" id="move-history" role="log" aria-live="polite" aria-label="Game moves">
-                    </div>
-                </section>
-            </aside>
+    <section class="panel-section">
+        <h3 class="section-title">Engine Strength</h3>
+        <div class="slider-container">
+            <input type="range" id="elo-slider" min="1200" max="3000" value="1800" step="50">
+            <div class="slider-labels">
+                <span>Beginner</span>
+                <span id="elo-label-current">Expert</span>
+                <span>Grandmaster</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel-section">
+        <h3 class="section-title collapsible-title" id="move-history-toggle">
+            <span>Move History</span>
+            <span class="toggle-arrow">▼</span>
+        </h3>
+        <div class="move-history collapsible-content" id="move-history" role="log" aria-live="polite" aria-label="Game moves">
+        </div>
+    </section>
+</aside>
                     
                         <div class="move-pair">
                             <span class="move-number">1.</span>
