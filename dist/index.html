@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Serene Chess</title>
     <link rel="icon" href="/favicon.ico">
+    <link rel="preload" href="/pieces/wK.svg" as="image">
+    <link rel="preload" href="/pieces/wQ.svg" as="image">
+    <link rel="preload" href="/pieces/wR.svg" as="image">
+    <link rel="preload" href="/pieces/wB.svg" as="image">
+    <link rel="preload" href="/pieces/wN.svg" as="image">
+    <link rel="preload" href="/pieces/wP.svg" as="image">
+    <link rel="preload" href="/pieces/bK.svg" as="image">
+    <link rel="preload" href="/pieces/bQ.svg" as="image">
+    <link rel="preload" href="/pieces/bR.svg" as="image">
+    <link rel="preload" href="/pieces/bB.svg" as="image">
+    <link rel="preload" href="/pieces/bN.svg" as="image">
+    <link rel="preload" href="/pieces/bP.svg" as="image">
+
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
@@ -1092,7 +1105,7 @@
 
 
     </style>
-  <script type="module" crossorigin src="/assets/index-CN4Kll5S.js"></script>
+  <script type="module" crossorigin src="/assets/index-BoDsJNwg.js"></script>
 </head>
 <body>
     <div class="app">
@@ -1197,9 +1210,8 @@
 
 
 
-<div class="settings-backdrop" id="settings-backdrop"></div>
+<div class="settings-backdrop" id="settings-backdrop">
     <div class="settings-modal" id="settings-modal" role="dialog" aria-labelledby="settings-title">
-       </div>
         <div class="panel-section">
             <h3 class="section-title" id="settings-title">Settings</h3>
 
@@ -1214,31 +1226,32 @@
                 </div>
             </div>
 
-        <div class="toggle-group">
-            <div class="toggle-info">
-                <div class="toggle-label">Sound Effects</div>
-                <div class="toggle-description">Play audio feedback for moves and events.</div>
+            <div class="toggle-group">
+                <div class="toggle-info">
+                    <div class="toggle-label">Sound Effects</div>
+                    <div class="toggle-description">Play audio feedback for moves and events.</div>
+                </div>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="sound-toggle">
+                    <span class="toggle-slider"></span>
+                </div>
             </div>
-            <div class="toggle-switch">
-                <input type="checkbox" id="sound-toggle">
-                <span class="toggle-slider"></span>
-            </div>
-        </div>
 
-        <div class="toggle-group">
-            <div class="toggle-info">
-                <div class="toggle-label">Highlight Legal Moves</div>
-                <div class="toggle-description">Show possible moves for a selected piece.</div>
+            <div class="toggle-group">
+                <div class="toggle-info">
+                    <div class="toggle-label">Highlight Legal Moves</div>
+                    <div class="toggle-description">Show possible moves for a selected piece.</div>
+                </div>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="highlight-moves-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </div>
             </div>
-            <div class="toggle-switch">
-                <input type="checkbox" id="highlight-moves-toggle" checked>
-                <span class="toggle-slider"></span>
-            </div>
-        </div>
 
-        <div class="button-group" style="margin-top: 24px;">
-            <button type="button" class="btn" id="reset-settings">Reset</button>
-            <button type="button" class="btn btn-primary" id="close-settings">Close</button>
+            <div class="button-group" style="margin-top: 24px;">
+                <button type="button" class="btn" id="reset-settings">Reset</button>
+                <button type="button" class="btn btn-primary" id="close-settings">Close</button>
+            </div>
         </div>
     </div>
 </div>

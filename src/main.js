@@ -620,18 +620,31 @@ function updateBoardAfterMove(move) {
 
 
 // This function now only handles the simple click-to-move interaction.
+// REPLACE your old onSquareClick with this efficient version
 function onSquareClick(square) {
-    if (!selectedSquare) {
-        const piece = game.get(square);
-        // Check if it's a piece the player can move.
-        if (piece && ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === game.turn()))) {
-            selectedSquare = square;
-            renderBoard(game.fen(), boardOrientation); // Re-render to show selection.
-        }
-    } else {
-        // If a square was already selected, attempt the move.
+    // If a piece was already selected, this click is a move attempt.
+    if (selectedSquare) {
         handlePlayerMove(selectedSquare, square);
         selectedSquare = null;
+        clearHighlights();
+        return;
+    }
+
+    // Otherwise, this is the first click (a selection attempt).
+    clearHighlights(); // Clear any previous selection
+
+    const piece = game.get(square);
+    const canMove = (piece && ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === game.turn())));
+
+    if (canMove) {
+        selectedSquare = square;
+        document.querySelector(`[data-square="${square}"]`)?.classList.add('selected');
+
+        // Show possible move highlights
+        const moves = game.moves({ square: square, verbose: true });
+        moves.forEach(move => {
+            document.querySelector(`[data-square="${move.to}"]`)?.classList.add('possible-move');
+        });
     }
 }
 
@@ -836,6 +849,13 @@ document.querySelectorAll('.settings-modal .toggle-group').forEach(group => {
     });
 });
 // --- Settings Modal Logic (replaces the three old listeners) ---
+
+// ADD this helper function
+function clearHighlights() {
+    document.querySelectorAll('.selected, .possible-move').forEach(el => {
+        el.classList.remove('selected', 'possible-move');
+    });
+}
 
 // REPLACE with this new version
 function toggleSettingsModal(show) {
