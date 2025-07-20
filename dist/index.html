@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Serene Chess</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         
@@ -135,6 +136,19 @@
             transition: background-color 0.3s ease, color 0.3s ease;
             touch-action: manipulation;
             -webkit-overflow-scrolling: touch;
+        }
+        
+        /* New: Enhanced move intention highlights */
+        
+        .square.move-from-highlight {
+            box-shadow: inset 0 0 0 4px var(--accent-warm); /* Outline */
+            background-color: rgba(255, 165, 0, 0.2) !important; /* Subtle orange glow */
+            transition: box-shadow 0.1s ease-out, background-color 0.1s ease-out;
+        }
+        
+        .square.move-to-preview {
+            background-color: rgba(139, 115, 85, 0.4) !important; /* Use possible move color */
+            transition: background-color 0.1s ease-out;
         }
         
         .app {
@@ -996,7 +1010,7 @@
             background-color: #2c2c2c;
         }
     </style>
-  <script type="module" crossorigin src="/assets/index-Bs6--Ipg.js"></script>
+  <script type="module" crossorigin src="/assets/index-BduGwyGr.js"></script>
 </head>
 <body>
     <div class="app">
