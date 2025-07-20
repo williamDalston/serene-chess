@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let engineElo = 1800;
     let engineContempt = 0;
     let soundEnabled = false;
-    let trainingMode = true;
+    let trainingMode = false;
     let forceMoveTimeout;
     let selectedSquare = null;
     let isAudioReady = false;
@@ -423,7 +423,6 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
             
             // Add event listeners for mouse drag/drop and touch
             squareEl.addEventListener('dragover', handleDragOver);
-            squareEl.addEventListener('drop', handleDrop);
             squareEl.addEventListener('dragleave', (e) => e.currentTarget.classList.remove('drag-over'));
             squareEl.addEventListener('click', () => onSquareClick(squareName));
 
@@ -435,13 +434,11 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
                 pieceImg.classList.add('chess-piece');
                 
                 // Make pieces draggable only for the current human player or in human vs human mode
-                if ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === tempGame.turn())) {
-                    pieceImg.draggable = true; // Enable native drag for mouse
-                    pieceImg.addEventListener('dragstart', handleDragStart);
-                    pieceImg.addEventListener('dragend', handleDragEnd);
-                    // Add touch listeners for mobile drag
-                    
-                }
+            if ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === tempGame.turn())) {
+                // Add our new universal drag listeners for both mouse and touch
+                pieceImg.addEventListener('mousedown', dragStart);
+                pieceImg.addEventListener('touchstart', dragStart, { passive: false });
+            }
                 squareEl.appendChild(pieceImg);
             }
             boardEl.appendChild(squareEl); // Add the square to the chessboard
@@ -452,40 +449,103 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
     updateTurnIndicator(); // Update the visual indicator of whose turn it is
 }
 // PASTE THIS NEW BLOCK FOR DRAG AND DROP
+// PASTE THIS ENTIRE NEW BLOCK OF CODE
 
-// --- Drag, Drop, and Touch Handlers ---
+// --- Universal Drag and Drop Logic ---
 
-function handleDragStart(e) {
-    // Set the data for the drag operation
-    e.dataTransfer.setData('text/plain', e.target.parentElement.dataset.square);
-    // Add a class for visual feedback
-    setTimeout(() => e.target.classList.add('dragging'), 0);
-}
+let draggedElement = null;  // The visual clone of the piece being dragged
+let startSquare = null;     // The square the drag started from ('e2', 'f6', etc.)
 
-function handleDragEnd(e) {
-    e.target.classList.remove('dragging');
-}
+function dragStart(event) {
+    // Find the piece element that was clicked or touched
+    const pieceEl = event.target;
+    if (!pieceEl.classList.contains('chess-piece')) return;
 
-function handleDragOver(e) {
-    e.preventDefault(); // This is necessary to allow a drop
-    e.currentTarget.classList.add('drag-over');
-}
+    event.preventDefault(); // Prevent default browser actions (like text selection or image drag)
 
-function handleDragLeave(e) {
-    e.currentTarget.classList.remove('drag-over');
-}
+    startSquare = pieceEl.parentElement.dataset.square;
 
-function handleDrop(e) {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
+    // Create a visual clone of the piece for dragging
+    draggedElement = pieceEl.cloneNode(true);
+    const rect = pieceEl.getBoundingClientRect();
 
-    const fromSquare = e.dataTransfer.getData('text/plain');
-    const toSquare = e.currentTarget.dataset.square;
+    // Style the clone to look "lifted" and position it correctly
+    Object.assign(draggedElement.style, {
+        position: 'fixed',
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        zIndex: 1000,
+        pointerEvents: 'none', // Allow events to pass through to squares underneath
+        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))'
+    });
 
-    if (fromSquare && toSquare) {
-        handlePlayerMove(fromSquare, toSquare); // Call our new central move function
+    document.body.appendChild(draggedElement); // Add the clone to the page
+    pieceEl.style.opacity = '0.5'; // Make the original piece transparent
+
+    // Position the clone based on initial event
+    dragMove(event);
+
+    // Add listeners to the whole document to track movement and release
+    if (event.type === 'mousedown') {
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd, { once: true });
+    } else { // Touch event
+        document.addEventListener('touchmove', dragMove);
+        document.addEventListener('touchend', dragEnd, { once: true });
     }
 }
+
+function dragMove(event) {
+    if (!draggedElement) return;
+
+    // Get the correct coordinates for either mouse or touch
+    const x = event.touches ? event.touches[0].clientX : event.clientX;
+    const y = event.touches ? event.touches[0].clientY : event.clientY;
+
+    // Update the clone's position to follow the cursor/finger
+    requestAnimationFrame(() => {
+        draggedElement.style.left = `${x - draggedElement.offsetWidth / 2}px`;
+        draggedElement.style.top = `${y - draggedElement.offsetHeight / 2}px`;
+    });
+}
+
+function dragEnd(event) {
+    // Clean up the event listeners
+    document.removeEventListener('mousemove', dragMove);
+    document.removeEventListener('touchmove', dragMove);
+
+    if (!draggedElement) return;
+
+    // Get the coordinates of the drop
+    const x = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+    const y = event.changedTouches ? event.changedTouches[0].clientY : event.clientY;
+
+    // Find the element underneath the drop point
+    const dropTarget = document.elementFromPoint(x, y);
+    const endSquareEl = dropTarget?.closest('.square');
+    const endSquare = endSquareEl?.dataset.square;
+
+    // Make the original piece visible again
+    const originalPieceEl = document.querySelector(`[data-square="${startSquare}"] .chess-piece`);
+    if (originalPieceEl) originalPieceEl.style.opacity = '1';
+
+    // Remove the visual clone from the page
+    document.body.removeChild(draggedElement);
+    draggedElement = null;
+
+    // If we dropped on a valid square, handle the move
+    if (startSquare && endSquare) {
+        handlePlayerMove(startSquare, endSquare);
+    } else {
+        // If dropped outside the board, just refresh the board to be safe
+        renderBoard(game.fen(), boardOrientation);
+    }
+}
+// --- Drag, Drop, and Touch Handlers ---
+
+
 
 // PASTE THIS ENTIRE BLOCK
 
@@ -735,32 +795,36 @@ function applyPreset(presetName) {
 
     // ADD THIS NEW, CORRECT LISTENER
 // PASTE THIS SINGLE, CORRECT LISTENER
-// PASTE THIS FINAL, CORRECTED LISTENER
+// PASTE THIS AS THE ONLY LISTENER FOR THE TRAINING MODE TOGGLE
+
 trainingModeToggle.addEventListener('change', (e) => {
+    // 1. Update the state from the checkbox's new state.
     trainingMode = e.target.checked;
-    saveSettings();
+    saveSettings(); // Save the new preference.
 
-    // Get only the panels related to the engine
-    const enginePresetPanel = document.querySelector('[data-preset="defender"]').closest('.panel-section');
-    const engineStrengthPanel = document.getElementById('elo-slider').closest('.panel-section');
-    const enginePanels = [enginePresetPanel, engineStrengthPanel];
-
-    // Visually disable or enable the engine panels
+    // 2. Update the UI: Grey out the engine controls if Training Mode is ON.
     const isEngineDisabled = trainingMode;
-    enginePanels.forEach(panel => {
+    const enginePresetPanel = document.querySelector('[data-preset="defender"]')?.closest('.panel-section');
+    const engineStrengthPanel = document.getElementById('elo-slider')?.closest('.panel-section');
+    
+    [enginePresetPanel, engineStrengthPanel].forEach(panel => {
         if (panel) {
             panel.style.opacity = isEngineDisabled ? '0.5' : '1';
             panel.style.pointerEvents = isEngineDisabled ? 'none' : 'auto';
         }
     });
 
-    // If the engine was just turned ON (Training Mode OFF) and it's its turn, make it move.
+    // 3. Re-render the board immediately. This is crucial because it updates
+    //    which pieces are draggable.
+    //    - In Training Mode (ON): You can move pieces for whosever turn it is.
+    //    - When OFF: You can only move your own pieces.
+    renderBoard(game.fen(), boardOrientation);
+
+    // 4. If the engine was just turned ON (Training Mode OFF) and it's the 
+    //    engine's turn to move, tell it to think.
     if (!isEngineDisabled && game.turn() !== playerColor && !game.isGameOver()) {
         requestEngineMove();
     }
-
-    // Re-render the board to update which pieces are draggable.
-    renderBoard(game.fen(), boardOrientation);
 });
     
     // Add event listeners for auto-queen and highlight moves toggles here
