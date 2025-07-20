@@ -1288,58 +1288,72 @@
             </div>
 
 
-        <aside class="side-panel">
-<section class="panel-section">
+<aside class="side-panel">
+  <section class="panel-section" style="background: var(--bg-secondary); border-radius: var(--radius-lg); box-shadow: var(--shadow-gentle);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
-        <h3 class="section-title" style="margin-bottom: 0;">Controls</h3>
-        <span class="settings-icon" id="settings-icon" role="button" tabindex="0" aria-label="Settings">⚙️</span>
+      <h3 class="section-title" style="margin-bottom: 0; font-weight: 600;">Controls</h3>
+      <span
+        class="settings-icon"
+        id="settings-icon"
+        role="button"
+        tabindex="0"
+        aria-label="Settings"
+        style="font-size: 1.25rem; transition: transform 0.2s;"
+      >⚙️</span>
     </div>
 
-    <div class="toggle-group">
-        <div class="toggle-info">
-            <div class="toggle-label">Training Mode</div>
-            <div class="toggle-description">Disable the engine to control both sides.</div>
+    <div
+      class="toggle-group"
+      style="padding: var(--space-md); border-radius: var(--radius-md); transition: background-color 0.2s ease;"
+    >
+      <div class="toggle-info">
+        <div class="toggle-label" style="font-weight: 600;">Training Mode</div>
+        <div class="toggle-description" style="font-size: 0.875rem;">
+          Disable the engine to control both sides.
         </div>
-        <div class="toggle-switch">
-            <input type="checkbox" id="training-mode-toggle">
-            <span class="toggle-slider"></span>
-        </div>
-        <label class="toggle-switch">
-           <input type="checkbox" id="training-mode-toggle">
-         <span class="toggle-slider"></span>
-        </label>
+      </div>
+      <label class="toggle-switch" style="margin-left: auto;">
+        <input type="checkbox" id="training-mode-toggle">
+        <span class="toggle-slider"></span>
+      </label>
     </div>
-</section>
+  </section>
 
-    <section class="panel-section">
-        <h3 class="section-title">Engine Presets</h3>
-        <div class="preset-group">
-            <button type="button" class="btn" data-preset="defender" title="Defender: Cautious and solid.">Defender</button>
-            <button type="button" class="btn active" data-preset="balanced" title="Balanced: A neutral, well-rounded style.">Balanced</button>
-            <button type="button" class="btn" data-preset="aggressor" title="Aggressor: Prefers attacking and complications.">Aggressor</button>
-        </div>
-    </section>
+  <section class="panel-section">
+    <h3 class="section-title">Engine Presets</h3>
+    <div class="preset-group">
+      <button type="button" class="btn" data-preset="defender" title="Defender: Cautious and solid.">Defender</button>
+      <button type="button" class="btn active" data-preset="balanced" title="Balanced: A neutral, well-rounded style.">Balanced</button>
+      <button type="button" class="btn" data-preset="aggressor" title="Aggressor: Prefers attacking and complications.">Aggressor</button>
+    </div>
+  </section>
 
-    <section class="panel-section">
-        <h3 class="section-title">Engine Strength</h3>
-        <div class="slider-container">
-            <input type="range" id="elo-slider" min="1200" max="3000" value="3000" step="50">
-            <div class="slider-labels">
-                <span>Beginner</span>
-                <span>Grandmaster</span>
-            </div>
-        </div>
-    </section>
+  <section class="panel-section">
+    <h3 class="section-title">Engine Strength</h3>
+    <div class="slider-container">
+      <input type="range" id="elo-slider" min="1200" max="3000" value="3000" step="50">
+      <div class="slider-labels">
+        <span>Beginner</span>
+        <span>Grandmaster</span>
+      </div>
+    </div>
+  </section>
 
-    <section class="panel-section">
-        <h3 class="section-title collapsible-title" id="move-history-toggle">
-            <span>Move History</span>
-            <span class="toggle-arrow">▼</span>
-        </h3>
-        <div class="move-history collapsible-content" id="move-history" role="log" aria-live="polite" aria-label="Game moves">
-        </div>
-    </section>
-</aside>    
+  <section class="panel-section">
+    <h3 class="section-title collapsible-title" id="move-history-toggle">
+      <span>Move History</span>
+      <span class="toggle-arrow">▼</span>
+    </h3>
+    <div
+      class="move-history collapsible-content"
+      id="move-history"
+      role="log"
+      aria-live="polite"
+      aria-label="Game moves"
+    ></div>
+  </section>
+</aside>
+
 
 
 
