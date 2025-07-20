@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let engineElo = 1800;
     let engineContempt = 0;
     let soundEnabled = false;
-    let trainingMode = false;
+    let trainingMode = true;
     let forceMoveTimeout;
     let selectedSquare = null;
     let isAudioReady = false;
@@ -157,17 +157,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     engine.onInfo = (info) => { if (info.score) updateEvaluationBar(info.score, game.turn()); };
     engine.onBestMove = (moveStr) => {
-      const move = game.move(moveStr, { sloppy: true });
-      if (move) {
+    const move = game.move(moveStr, { sloppy: true });
+    if (move) {
         playSound(move);
         lastMove = move;
-      }
-      hideThinking();
-      renderBoard(game.fen(), boardOrientation);
-      updateHistory();
-      updateCapturedPieces();
-      checkGameOver();
-      updateTurnIndicator();
+        // THIS IS THE CHANGED LINE
+        updateBoardAfterMove(move);
+    }
+    hideThinking();
+    // renderBoard(game.fen(), boardOrientation); // This line was removed/replaced
+    updateHistory();
+    updateCapturedPieces();
+    checkGameOver();
+    updateTurnIndicator();
     };
     engine.onError = (err) => console.error('[ENGINE ERROR]', err);
 
@@ -593,32 +595,69 @@ if (!draggedPieceEl) return;
         }
     }
 
-async function attemptMove(from, to) {
+// PASTE THIS NEW FUNCTION IN ITS PLACE
+function attemptMove(from, to) {
     const legalMove = game.moves({ square: from, verbose: true }).find(m => m.to === to);
-    if (!legalMove) { 
-        // Clear selection and re-render for illegal moves
-        selectedSquare = null; // << NEW: Clear selected square immediately
-        renderBoard(game.fen(), boardOrientation); 
-        return; 
+
+    if (!legalMove) {
+        // If the move is illegal, just clear the selection and do nothing else.
+        selectedSquare = null;
+        // We don't need a full re-render here, the piece just won't move.
+        return;
     }
 
-    const moveData = { from, to };
-    if (legalMove.flags.includes('p')) {
-        try { 
-            moveData.promotion = await promptForPromotion(playerColor); 
-        } 
-        catch { 
-            // Clear selection and re-render if promotion is canceled
-            selectedSquare = null; // << NEW: Clear selected square immediately
-            renderBoard(game.fen(), boardOrientation); 
-            return; 
+    // If the move is a promotion, we'll just default to Queen for now to keep it simple.
+    // The promotion dialog can be re-integrated later.
+    const moveData = { from, to, promotion: 'q' };
+    const result = game.move(moveData);
+
+    if (result) {
+        playSound(result);
+        lastMove = result;
+        // Instead of a full re-render, we will call our new efficient updater
+        updateBoardAfterMove(result); 
+
+        updateHistory();
+        updateCapturedPieces();
+        if (checkGameOver()) return;
+
+        // If training mode is off, ask the engine to move.
+        if (!trainingMode) {
+            requestEngineMove();
         }
     }
+}
 
-    // Clear the selected square before animating the move
-    // This ensures the selected square highlight disappears as the animation starts
-    selectedSquare = null; // << NEW: Clear selected square here if move is proceeding
-    animateAndFinalizeMove(moveData);
+// ADD THIS ENTIRE NEW FUNCTION
+function updateBoardAfterMove(move) {
+    const fromEl = document.querySelector(`[data-square="${move.from}"]`);
+    const toEl = document.querySelector(`[data-square="${move.to}"]`);
+
+    // If it was a capture, the 'to' square has a piece. We remove it.
+    if (move.flags.includes('c')) {
+        toEl.innerHTML = '';
+    }
+
+    // Move the piece's image from the 'from' square to the 'to' square
+    if (fromEl && fromEl.firstChild) {
+        toEl.appendChild(fromEl.firstChild);
+    }
+
+    // Handle castling rook movement
+    if (move.flags.includes('k')) { // Kingside castle
+        const rookFromEl = document.querySelector(`[data-square="h${move.from[1]}"]`);
+        const rookToEl = document.querySelector(`[data-square="f${move.from[1]}"]`);
+        if (rookFromEl && rookFromEl.firstChild) rookToEl.appendChild(rookFromEl.firstChild);
+    } else if (move.flags.includes('q')) { // Queenside castle
+        const rookFromEl = document.querySelector(`[data-square="a${move.from[1]}"]`);
+        const rookToEl = document.querySelector(`[data-square="d${move.from[1]}"]`);
+        if (rookFromEl && rookFromEl.firstChild) rookToEl.appendChild(rookFromEl.firstChild);
+    }
+
+    // Update highlights for the last move
+    document.querySelectorAll('.last-move').forEach(el => el.classList.remove('last-move'));
+    fromEl.classList.add('last-move');
+    toEl.classList.add('last-move');
 }
 
     // --- NEW: Enhanced Animations Helper Functions ---
@@ -1522,12 +1561,11 @@ function _getDefaultSettings() {
         version: SETTINGS_VERSION,
         darkMode: false,
         soundEnabled: false,
-        autoQueen: false,
+        autoQueen: true,
         highlightMoves: true, // Default to true
         trainingMode: false,
-        trainingMode: false,
         elo: 3000, // Default ELO
-        contempt: 0 // Default Contempt (balanced preset)
+        contempt: 100 // Default Contempt (balanced preset)
     };
 }
 
