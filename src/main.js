@@ -1,7 +1,8 @@
 // --- Imports: Always at the Top ---
 import StockfishEngine from './engineController.js';
 import { Chess } from 'chess.js';
-import * as Tone from 'https://cdn.skypack.dev/tone';
+import * as Tone from 'tone';
+
 
 console.log('main.js loaded');
 window.SereneChessLoaded = true;
