@@ -1207,6 +1207,14 @@ function applyPreset(presetName) {
         }
     });
 
+        // --- ADD THIS NEW CODE BLOCK BELOW IT ---
+    const closeSettingsBtn = document.getElementById('close-settings');
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+        });
+    }
+
 function updateHistory() {
        historyEl.innerHTML = '';
     

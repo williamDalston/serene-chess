@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Serene Chess</title>
-    <link rel="icon" type="image/png" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         
@@ -999,11 +999,12 @@
                     <div class="captured-pieces" id="black-captured" aria-label="Black captured pieces"></div>
                     
                     <div class="button-group">
-                        <button class="btn btn-primary" id="new-game">New Game</button>
-                        <button class="btn" id="undo-move" disabled>Undo</button>
-                        <button class="btn" id="flip-switch-button">Play as Black</button>
-                        <button class="btn" id="force-move" disabled>Force Move</button>
+                        <button type="button" class="btn btn-primary" id="new-game">New Game</button>
+                        <button type="button" class="btn" id="undo-move" disabled>Undo</button>
+                        <button type="button" class="btn" id="flip-switch-button">Play as Black</button>
+                        <button type="button" class="btn" id="force-move" disabled>Force Move</button>
                     </div>
+                
                 </div>
             </div>
 
@@ -1030,8 +1031,7 @@
                     </div>
                 </section>
 
-                <section class="panel-section">
-                    <section class="panel-section">
+            <section class="panel-section">
                 <h3 class="section-title collapsible-title" id="move-history-toggle">
                     <span>Move History</span>
                     <span class="toggle-arrow">▼</span>
