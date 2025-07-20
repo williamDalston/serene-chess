@@ -1085,27 +1085,27 @@
         justify-content: center;
         opacity: 0;
         visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
     }
         .settings-backdrop.visible {
         opacity: 1;
         visibility: visible;
     }
         .settings-modal {
-        /* Remove old positioning */
-        /* position: fixed; top: 50%; left: 50%; */
-        transform: scale(0.95);
+        /* This removes the old fixed positioning */
+        transform: scale(0.95) translateY(10px);
         opacity: 0;
         transition: opacity 0.3s ease, transform 0.3s ease;
+        width: 90%; /* Ensure it's responsive */
+        max-width: 320px;
     }
         .settings-backdrop.visible .settings-modal {
-        transform: scale(1);
+        transform: scale(1) translateY(0);
         opacity: 1;
     }
 
-
     </style>
-  <script type="module" crossorigin src="/assets/index-kayJGciS.js"></script>
+  <script type="module" crossorigin src="/assets/index-BD-4OwtU.js"></script>
 </head>
 <body>
     <div class="app">
@@ -1192,7 +1192,6 @@
             <input type="range" id="elo-slider" min="1200" max="3000" value="3000" step="50">
             <div class="slider-labels">
                 <span>Beginner</span>
-                <span id="elo-label-current">Grandmaster</span>
                 <span>Grandmaster</span>
             </div>
         </div>
@@ -1255,8 +1254,6 @@
         </div>
     </div>
 </div>
-
-
 
 
         <div class="game-over-overlay" id="game-over-overlay">
