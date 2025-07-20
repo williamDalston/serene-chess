@@ -27,6 +27,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 
+    // --- NEW: Enhanced configuration with delight-focused animations ---
+    const ANIMATION_CONFIG = {
+        // Base durations - now faster for snappier feel
+        minDuration: 120,
+        maxDuration: 280,
+        baseDuration: 180,
+
+        // Multiple easing curves for different situations
+        easing: {
+            normal: 'cubic-bezier(0.34, 1.56, 0.64, 1)', // Slight bounce for satisfaction
+            capture: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)', // More dramatic for captures
+            check: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', // Smooth for checks
+            castle: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)' // Gentle bounce for castling
+        },
+
+        zIndex: 1000, // Z-index for flying pieces
+
+        // Visual feedback timing
+        feedback: {
+            pieceLifeDuration: 80,
+            squareHighlightDuration: 200,
+            captureShakeDuration: 150,
+            checkPulseDuration: 300
+        }
+    };
+    // --- END NEW ---
+
     // --- Engine Preset Configurations ---
     const PRESETS = {
         defender: { contempt: -50, name: "Defender: Cautious and solid." },
@@ -165,15 +192,15 @@ function playSound(move) {
 
 function updateLayoutForDevice() {
     if (isMobile) {
-        // historyEl.style.display = 'none'; // OLD: Replaced by collapsible-content .collapsed
-        moveHistoryToggleEl.classList.add('collapsed'); // Make title look collapsed
-        historyEl.classList.add('collapsed'); // Hide content
-        historyEl.style.maxHeight = '0'; // Ensure max-height for smooth transition
+        moveHistoryToggleEl.classList.add('collapsed'); // Default to collapsed on mobile
+        historyEl.classList.add('collapsed');
+        historyEl.style.maxHeight = '0px'; // Ensure it's visually collapsed
+        historyEl.style.display = 'block'; // Make sure it's block so max-height transition works
     } else {
-        // historyEl.style.display = 'block'; // OLD: Replaced by collapsible-content .collapsed
-        moveHistoryToggleEl.classList.remove('collapsed'); // Ensure title looks open
-        historyEl.classList.remove('collapsed'); // Show content
-        historyEl.style.maxHeight = '250px'; // Ensure max-height for smooth transition
+        moveHistoryToggleEl.classList.remove('collapsed'); // Always expanded on desktop
+        historyEl.classList.remove('collapsed');
+        historyEl.style.maxHeight = '250px'; // Restore default desktop height
+        historyEl.style.display = 'block';
     }
     evaluationDisplay.style.position = isMobile ? 'relative' : 'absolute';
     evaluationDisplay.style.order = isMobile ? '-1' : 'initial';
@@ -213,7 +240,7 @@ function updateLayoutForDevice() {
     // Toggle move history visibility on mobile
 if (moveHistoryToggleEl) {
     moveHistoryToggleEl.addEventListener('click', () => {
-        // Only allow toggling if in mobile mode
+        // Only allow toggling if currently in mobile mode
         if (isMobile) {
             const isCollapsed = moveHistoryToggleEl.classList.toggle('collapsed');
             historyEl.classList.toggle('collapsed', isCollapsed);
@@ -222,7 +249,6 @@ if (moveHistoryToggleEl) {
         }
     });
 }
-
     // --- Game & UI Logic ---
    // --- Game & UI Logic ---
 function startNewGame() {
@@ -284,7 +310,11 @@ function requestEngineMove(isFast = false) {
         if (game.turn() !== playerColor && !humanMode && !game.isGameOver()) {
             requestEngineMove(true); // 'true' signals this is an immediate/fast first move of engine's turn
         }
-        
+            // --- NEW: Ensure full UI state is consistent when game flow starts ---
+        updateHistory();       // Re-render history for current game state (clears old if new game)
+        updateCapturedPieces(); // Re-render captured pieces for current game state (clears old if new game)
+        // --- END NEW ---
+
         // Update button states based on the new game state
         // Undo button enabled if there's history, disabled if not (or only 1 move if humanMode)
         undoBtn.disabled = humanMode ? game.history().length < 1 : game.history().length < 2;
@@ -317,12 +347,17 @@ function requestEngineMove(isFast = false) {
         return true;
     }
 
+    function clearTemporaryHighlights() {
+    document.querySelectorAll('.square.move-from-highlight, .square.move-to-preview').forEach(el => {
+        el.classList.remove('move-from-highlight', 'move-to-preview');
+    });
+}
 // --- Board Rendering ---
 // Modified to accept an explicit desiredOrientation for immediate flips
 function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { // Add desiredOrientation parameter
     // Before rendering, clear all existing drag-over classes to prevent stickiness
     document.querySelectorAll('.square.drag-over').forEach(sq => sq.classList.remove('drag-over'));
-    
+    clearTemporaryHighlights();
     const tempGame = new Chess(fen); // Create a temporary game for rendering the specific FEN
     boardEl.innerHTML = ''; // Clear the current board display
 
@@ -464,8 +499,8 @@ selectedSquare = e.target.parentElement.dataset.square;
         if (!draggedPieceEl) return;
         requestAnimationFrame(() => {
             const touch = e.touches[0];
-            draggedPieceEl.style.left = `${touch.pageX - draggedPieceEl.offsetWidth / 2}px`;
-            draggedPieceEl.style.top = `${touch.pageY - draggedPieceEl.offsetHeight / 2}px`;
+            draggedPieceEl.style.left = `${touch.clientX - draggedPieceEl.offsetWidth / 2}px`; // Use clientX
+            draggedPieceEl.style.top = `${touch.clientY - draggedPieceEl.offsetHeight / 2}px`;   // Use clientY
         });
     }
     function handleTouchEnd(e) {
@@ -517,94 +552,423 @@ if (!draggedPieceEl) return;
         }
     }
 
-    async function attemptMove(from, to) {
-        const legalMove = game.moves({ square: from, verbose: true }).find(m => m.to === to);
-        if (!legalMove) { renderBoard(game.fen(), boardOrientation); return; }
-
-        const moveData = { from, to };
-        if (legalMove.flags.includes('p')) {
-            try { moveData.promotion = await promptForPromotion(playerColor); } 
-            catch { renderBoard(game.fen(), boardOrientation); return; }
-        }
-        animateAndFinalizeMove(moveData);
+async function attemptMove(from, to) {
+    const legalMove = game.moves({ square: from, verbose: true }).find(m => m.to === to);
+    if (!legalMove) { 
+        // Correct renderBoard call for illegal moves
+        renderBoard(game.fen(), boardOrientation); 
+        return; 
     }
 
-    function animateAndFinalizeMove(move) {
-        const fromEl = document.querySelector(`[data-square=${move.from}]`);
-        const toEl = document.querySelector(`[data-square=${move.to}]`);
-        const pieceEl = fromEl.querySelector('.chess-piece');
-        
-        if (!fromEl || !toEl || !pieceEl) {
-            const result = game.move(move);
-            if (result) lastMove = result;
+    const moveData = { from, to };
+    if (legalMove.flags.includes('p')) {
+        try { 
+            moveData.promotion = await promptForPromotion(playerColor); 
+        } 
+        catch { 
+            // Correct renderBoard call if promotion is canceled
+            renderBoard(game.fen(), boardOrientation); 
+            return; 
+        }
+    }
+    animateAndFinalizeMove(moveData);
+}
+
+    // --- NEW: Enhanced Animations Helper Functions ---
+
+    // Add immediate visual feedback when move starts
+    function highlightMoveIntent(move) {
+        const fromSquare = document.querySelector(`[data-square="${move.from}"]`);
+        const toSquare = document.querySelector(`[data-square="${move.to}"]`);
+
+        if (fromSquare) {
+            fromSquare.classList.add('move-from-highlight');
+            setTimeout(() => fromSquare.classList.remove('move-from-highlight'), 300);
+        }
+
+        if (toSquare) {
+            toSquare.classList.add('move-to-preview');
+            setTimeout(() => toSquare.classList.remove('move-to-preview'), 150);
+        }
+    }
+
+    // Add subtle "life" animation to piece before it moves
+    function addPieceLifeAnimation(pieceEl) {
+        pieceEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.pieceLifeDuration}ms ease-out`;
+        pieceEl.style.transform = 'scale(1.05)';
+
+        setTimeout(() => {
+            pieceEl.style.transform = 'scale(1)';
+            setTimeout(() => {
+                pieceEl.style.transition = 'none';
+            }, ANIMATION_CONFIG.feedback.pieceLifeDuration);
+        }, ANIMATION_CONFIG.feedback.pieceLifeDuration);
+    }
+
+    // Create flying piece with enhanced visual effects
+    function createEnhancedFlyingPiece(originalPiece, fromRect) {
+        const flyingPiece = originalPiece.cloneNode(true);
+
+        Object.assign(flyingPiece.style, {
+            position: 'fixed', // Use 'fixed' to position relative to viewport, useful for scrolling pages
+            left: `${fromRect.left}px`,
+            top: `${fromRect.top}px`,
+            zIndex: ANIMATION_CONFIG.zIndex,
+            pointerEvents: 'none',
+            width: `${originalPiece.offsetWidth}px`,
+            height: `${originalPiece.offsetHeight}px`,
+            willChange: 'transform, filter', // Hint for browser optimization
+            transition: 'none', // Prevent inherited transitions
+            // Add subtle glow during flight and slight scale up
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+            transform: 'scale(1.02)'
+        });
+
+        document.body.appendChild(flyingPiece);
+        return flyingPiece;
+    }
+
+    // Enhanced animation sequence with contextual easing
+    function startDelightfulAnimation(flyingPiece, fromRect, toRect, move, result) {
+        // Double requestAnimationFrame for smoother start (ensures DOM is painted before animation)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                // Ensure board is rendered with piece in new position (but hidden)
+                renderBoard(game.fen(), boardOrientation);
+
+                const newToEl = document.querySelector(`[data-square="${move.to}"]`);
+                const newPieceEl = newToEl?.querySelector('.chess-piece');
+                if (newPieceEl) newPieceEl.style.visibility = 'hidden'; // Keep new piece hidden until animation ends
+
+                const dx = toRect.left - fromRect.left;
+                const dy = toRect.top - fromRect.top;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const duration = calculateContextualDuration(distance, result);
+                const easing = selectContextualEasing(result);
+
+                // Create the main movement animation
+                const moveAnimation = flyingPiece.animate([
+                    { // Keyframe 0: Starting state
+                        transform: 'scale(1.02) translate(0, 0)', // Slightly scaled, no translation
+                        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+                    },
+                    { // Keyframe 1: Nearing destination (80% of animation)
+                        transform: `scale(1) translate(${dx}px, ${dy}px)`, // Back to normal scale, translated
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                        offset: 0.8 // Landing preparation starts at 80% of duration
+                    },
+                    { // Keyframe 2: Final landing state (slightly squashed)
+                        transform: `scale(0.98) translate(${dx}px, ${dy}px)`, // Slightly squashed
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
+                    }
+                ], {
+                    duration,
+                    easing,
+                    fill: 'forwards' // Keep the final state
+                });
+
+                // Add special effects during animation (e.g., particles, glows)
+                addMoveSpecialEffects(flyingPiece, result, duration);
+
+                // Define what happens when the animation finishes or is cancelled
+                moveAnimation.onfinish = () => {
+                    finalizeMoveWithDelight(flyingPiece, newPieceEl, move, result, newToEl);
+                };
+                moveAnimation.oncancel = () => {
+                    console.warn('Animation cancelled'); // Should not happen often
+                    finalizeMoveWithDelight(flyingPiece, newPieceEl, move, result, newToEl); // Cleanup even if cancelled
+                };
+            });
+        });
+    }
+
+    // Add special visual effects during the move (e.g., capture particles, check glow)
+    function addMoveSpecialEffects(flyingPiece, result, duration) {
+        // Capture effect - add impact particles
+        if (result.captured) {
+            setTimeout(() => {
+                createCaptureParticles(flyingPiece);
+            }, duration * 0.7); // Particles appear 70% through the move
+        }
+
+        // Check effect - add warning glow to flying piece
+        if (result.san.includes('+')) {
+            flyingPiece.style.filter += ' drop-shadow(0 0 8px rgba(255, 200, 0, 0.6))'; // Yellowish glow
+        }
+
+        // Checkmate effect - dramatic glow to flying piece
+        if (result.san.includes('#')) {
+            flyingPiece.style.filter += ' drop-shadow(0 0 12px rgba(255, 50, 50, 0.8))'; // Reddish glow
+        }
+    }
+
+    // Create capture particle effect (DOM manipulation for small divs)
+    function createCaptureParticles(referenceElement) {
+        const rect = referenceElement.getBoundingClientRect();
+        const particleCount = 6; // Number of particles
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            // Inline styles for particle for quick creation and animation
+            particle.style.cssText = `
+                position: fixed;
+                left: ${rect.left + rect.width/2}px;
+                top: ${rect.top + rect.height/2}px;
+                width: 4px;
+                height: 4px;
+                background: radial-gradient(circle, #ff6b35, #f7931e); /* Orange/red gradient */
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: ${ANIMATION_CONFIG.zIndex + 1}; /* Above the flying piece */
+            `;
+
+            document.body.appendChild(particle);
+
+            // Randomize direction and distance for particle explosion
+            const angle = (i / particleCount) * 2 * Math.PI + (Math.random() * 0.5 - 0.25); // Spread around
+            const distance = 30 + Math.random() * 20; // Varying distances
+            const dx = Math.cos(angle) * distance;
+            const dy = Math.sin(angle) * distance;
+
+            particle.animate([
+                { transform: 'translate(0, 0) scale(1)', opacity: 1 }, // Start at piece center
+                { transform: `translate(${dx}px, ${dy}px) scale(0)`, opacity: 0 } // Fly out and fade
+            ], {
+                duration: 400, // Fast dissipation
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' // Smooth ease-out
+            }).onfinish = () => {
+                if (particle.parentNode) document.body.removeChild(particle); // Clean up particle element
+            };
+        }
+    }
+
+    // Calculate duration based on move distance and type
+    function calculateContextualDuration(distance, result) {
+        let baseDuration = ANIMATION_CONFIG.baseDuration + (distance * 0.3); // Base + distance-based speed
+
+        // Apply multipliers for different move types
+        if (result.captured) baseDuration *= 0.85; // Faster for captures
+        if (result.san.includes('O-O')) baseDuration *= 1.1; // Slightly slower for castling (more ceremonial)
+        if (result.san.includes('+') || result.san.includes('#')) baseDuration *= 1.05; // Slightly slower for checks/checkmates
+
+        // Clamp duration within min/max bounds
+        return Math.max(ANIMATION_CONFIG.minDuration, 
+                        Math.min(ANIMATION_CONFIG.maxDuration, baseDuration));
+    }
+
+    // Select easing curve based on move context
+    function selectContextualEasing(result) {
+        if (result.captured) return ANIMATION_CONFIG.easing.capture;
+        if (result.san.includes('O-O')) return ANIMATION_CONFIG.easing.castle;
+        if (result.san.includes('+')) return ANIMATION_CONFIG.easing.check;
+        return ANIMATION_CONFIG.easing.normal; // Default easing
+    }
+
+    // Handles finalization of move animation and landing effects
+    function finalizeMoveWithDelight(flyingPiece, destinationPiece, move, result, destinationSquareEl) { // Renamed param for clarity
+        try {
+            // Landing impact effect on the destination square
+            if (destinationSquareEl) {
+                destinationSquareEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.squareHighlightDuration}ms ease-out`;
+                destinationSquareEl.style.transform = 'scale(0.95)'; // Slight squash effect on landing
+
+                setTimeout(() => {
+                    destinationSquareEl.style.transform = 'scale(1)'; // Return to normal size
+                    setTimeout(() => {
+                        destinationSquareEl.style.transition = 'none'; // Remove transition to prevent future interference
+                    }, ANIMATION_CONFIG.feedback.squareHighlightDuration);
+                }, 50); // Small delay for effect to start
+            }
+
+            // Cleanup the temporary flying piece
+            flyingPiece.style.willChange = 'auto'; // Remove optimization hint
+            if (flyingPiece.parentNode) { // Check if it's still in the DOM before removing
+                document.body.removeChild(flyingPiece);
+            }
+
+            // Reveal destination piece with a satisfying pop/bounce
+            if (destinationPiece) {
+                destinationPiece.style.visibility = 'visible'; // Make the actual piece visible
+                destinationPiece.style.transform = 'scale(0.8)'; // Start slightly smaller
+                destinationPiece.style.transition = `transform ${ANIMATION_CONFIG.feedback.pieceLifeDuration * 1.5}ms cubic-bezier(0.34, 1.56, 0.64, 1)`; // Bounce transition
+
+                requestAnimationFrame(() => {
+                    destinationPiece.style.transform = 'scale(1)'; // Pop to normal size
+                    setTimeout(() => {
+                        destinationPiece.style.transition = 'none'; // Remove transition
+                    }, ANIMATION_CONFIG.feedback.pieceLifeDuration * 1.5);
+                });
+            }
+
+            // Add special landing effects (e.g., check pulse, capture shake)
+            addLandingEffects(result, destinationSquareEl);
+
+            // Continue game flow after a brief satisfying pause for effects
+            setTimeout(() => {
+                updateGameAfterMove(move, result);
+            }, 50); // Small delay before next action (e.g. engine move)
+
+        } catch (error) {
+            console.error('Error in finalizeMoveWithDelight:', error);
+            updateGameAfterMove(move, result); // Fallback to continue game flow even if animation errors
+        }
+    }
+
+    // Add special effects when piece lands
+    function addLandingEffects(result, destinationSquareEl) { // Renamed param for clarity
+        // Check warning pulse
+        if (result.san.includes('+') && !result.san.includes('#')) {
+            pulseSquare(destinationSquareEl, 'rgba(255, 200, 0, 0.3)'); // Yellow pulse for check
+        }
+
+        // Checkmate dramatic effect
+        if (result.san.includes('#')) {
+            pulseSquare(destinationSquareEl, 'rgba(255, 50, 50, 0.4)', 2); // Red pulse, twice for checkmate
+        }
+
+        // Capture satisfaction shake
+        if (result.captured) {
+            shakeBoard();
+        }
+    }
+
+    // Pulse effect for special moves (e.g., check)
+    function pulseSquare(squareEl, color, pulses = 1) { // Renamed param for clarity
+        if (!squareEl) return;
+
+        let pulseCount = 0;
+        const pulse = () => {
+            squareEl.style.boxShadow = `inset 0 0 20px ${color}`; // Inner glow
+            squareEl.style.transition = 'box-shadow 150ms ease-in-out';
+
+            setTimeout(() => {
+                squareEl.style.boxShadow = 'none'; // Turn off glow
+                pulseCount++;
+
+                if (pulseCount < pulses) {
+                    setTimeout(pulse, 150); // Repeat pulse
+                } else {
+                    // Ensure transition property is reset after all pulses are done
+                    setTimeout(() => {
+                        squareEl.style.transition = 'none';
+                        squareEl.style.boxShadow = 'none'; // Final cleanup
+                    }, 150);
+                }
+            }, 150);
+        };
+
+        pulse(); // Start the pulse
+    }
+
+    // Subtle board shake for captures
+    function shakeBoard() {
+        const board = document.getElementById('chessboard'); // Get the main chessboard element by ID
+        if (!board) return;
+
+        // Apply shake animation using inline styles
+        board.style.transition = `transform ${ANIMATION_CONFIG.feedback.captureShakeDuration}ms ease-out`;
+        board.style.transform = 'translateX(-2px)'; // Shake left
+
+        setTimeout(() => {
+            board.style.transform = 'translateX(2px)'; // Shake right
+            setTimeout(() => {
+                board.style.transform = 'translateX(0)'; // Return to center
+                setTimeout(() => {
+                    board.style.transition = 'none'; // Remove transition property
+                }, ANIMATION_CONFIG.feedback.captureShakeDuration);
+            }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3); // 1/3 duration for each shake phase
+        }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3);
+    }
+
+    // Error handling with feedback (if animation fails unexpectedly)
+    function restorePieceAfterError(pieceEl, flyingPiece) {
+        pieceEl.style.visibility = 'visible'; // Show original piece
+        if (flyingPiece.parentNode) { // Remove flying clone
+            document.body.removeChild(flyingPiece);
+        }
+        // Potentially add a visual cue for the user that an error occurred
+        // e.g., a quick red pulse on the from-square
+    }
+
+    // Fallback if core animation elements are missing or an error occurs during animation setup
+    function fallbackMoveWithFeedback(move) {
+        // First, apply the move to the game state
+        const result = game.move(move);
+        if (result) {
+            // No full animation, but render immediately
             renderBoard(game.fen(), boardOrientation);
+            lastMove = result; // Ensure lastMove is updated for highlighting
+
+            // Add quick visual feedback (pulse the target square)
+            const toSquare = document.querySelector(`[data-square="${move.to}"]`);
+            if (toSquare) {
+                pulseSquare(toSquare, 'rgba(100, 200, 100, 0.3)'); // Greenish pulse for a successful fallback move
+            }
+
+            // Continue game flow
+            updateGameAfterMove(move, result);
+        }
+        return result;
+    }
+
+    // Centralized function to update game state after a move (animated or not)
+    function updateGameAfterMove(move, result) {
+        updateHistory();
+        updateCapturedPieces();
+
+        if (!checkGameOver()) {
+            startGameFlow();
+        }
+    }
+    // --- END NEW: Enhanced Animations Helper Functions ---
+
+
+// Function called when a legal move is confirmed and ready for visual execution
+function animateAndFinalizeMove(move) {
+    try {
+        // Immediate visual feedback - highlight the move intention (from/to squares)
+        highlightMoveIntent(move);
+
+        const fromEl = document.querySelector(`[data-square="${move.from}"]`);
+        const toEl = document.querySelector(`[data-square="${move.to}"]`);
+        const pieceEl = fromEl?.querySelector('.chess-piece'); // Use optional chaining for robustness
+
+        if (!fromEl || !toEl || !pieceEl) {
+            console.warn(`Animation elements missing for move ${move.from}-${move.to}. Falling back.`);
+            // If elements are missing, fall back to simple move application
+            return fallbackMoveWithFeedback(move); 
+        }
+
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+
+        // Pre-move visual feedback (piece slightly scales up)
+        addPieceLifeAnimation(pieceEl);
+
+        // Create and append the visually moving piece (clone)
+        const flyingPiece = createEnhancedFlyingPiece(pieceEl, fromRect);
+        pieceEl.style.visibility = 'hidden'; // Hide the original piece on the board
+
+        // Update game state in chess.js
+        const result = game.move(move);
+        if (!result) { // Should ideally not happen if attemptMove already validated
+            console.error('Invalid move attempted during animation setup. Restoring piece.', move);
+            restorePieceAfterError(pieceEl, flyingPiece); // Restore if game.move fails (e.g., race condition)
+            renderBoard(game.fen(), boardOrientation); // Force re-render to correct state
             return;
         }
 
-const fromRect = fromEl.getBoundingClientRect();
-        const toRect = toEl.getBoundingClientRect();
-        const flyingPiece = pieceEl.cloneNode(true); // Keep this line
-        
-        Object.assign(flyingPiece.style, {
-            position: 'absolute',
-            left: `${fromRect.left}px`,
-            top: `${fromRect.top}px`,
-            zIndex: '1000',
-            pointerEvents: 'none',
-            width: `${pieceEl.offsetWidth}px`, // Use original piece's current rendered size
-            height: `${pieceEl.offsetHeight}px`,// Use original piece's current rendered size
-            willChange: 'transform'
-        });
-        
-        document.body.appendChild(flyingPiece);
-        
-        // Temporarily hide the original piece on the board *before* the game.move()
-        // This prevents the piece from appearing in two places briefly.
-        if (pieceEl) { // Added defensive check
-            pieceEl.style.visibility = 'hidden'; // Changed from opacity to visibility
-        }
-        const result = game.move(move);
-        if (result) {
-            playSound(result);
-            lastMove = result;
-        }
-        
-        requestAnimationFrame(() => {
-            renderBoard(game.fen(), boardOrientation);
-            
-            const newToEl = document.querySelector(`[data-square=${move.to}]`);
-            const newPieceEl = newToEl?.querySelector('.chess-piece');
-            if (newPieceEl) newPieceEl.style.visibility = 'hidden';
+        // Update lastMove for highlighting after game.move() is successful
+        lastMove = result; 
 
-            const dx = toRect.left - fromRect.left;
-            const dy = toRect.top - fromRect.top;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const duration = isMobile ? 
-                Math.min(Math.max(distance * 0.4, 100), 250) : 
-                Math.min(Math.max(distance * 0.6, 120), 350);
+        // Start the delightful animation sequence
+        startDelightfulAnimation(flyingPiece, fromRect, toRect, move, result);
 
-            flyingPiece.animate([
-                { transform: 'translate(0, 0)' },
-                { transform: `translate(${dx}px, ${dy}px)` }
-            ], { 
-                duration, 
-                easing: 'cubic-bezier(0.2, 1, 0.3, 1)',
-                fill: 'forwards'
-            }).onfinish = () => {
-                flyingPiece.style.willChange = 'auto';
-                document.body.removeChild(flyingPiece);
-                if (newPieceEl) newPieceEl.style.visibility = 'visible';
-                
-                updateHistory();
-                updateCapturedPieces();
-// After the animation and move, check for game over.
-                // If not game over, proceed with the standard game flow (which includes requesting engine move if needed).
-                if (!checkGameOver()) {
-                    startGameFlow(); // Let startGameFlow handle the next turn (human or engine)
-                }
-            };
-        });
+    } catch (error) {
+        console.error('Error in animateAndFinalizeMove:', error);
+        fallbackMoveWithFeedback(move); // Fallback if any error occurs during animation setup
     }
+}
 
     function promptForPromotion(color) {
         if (!promotionOverlay || !promotionDialog) return;
@@ -703,21 +1067,29 @@ flipSwitchBtn.addEventListener('click', () => {
         forceMoveBtn.disabled = true;
     });
 
-    function applyPreset(presetName) {
-        const preset = PRESETS[presetName];
-        if (!preset) return;
+function applyPreset(presetName) {
+    const preset = PRESETS[presetName];
+    if (!preset) return;
 
-        presetButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.preset === presetName));
-        
-        engineContempt = preset.contempt;
-        engine.setOption('Contempt', engineContempt);
+    // Visual highlight: Remove 'active' from all, add to clicked button
+    presetButtons.forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-preset="${presetName}"]`).classList.add('active');
 
-// --- NEW: Trigger game flow after preset change if it's engine's turn ---
-    // This ensures the engine reacts with its new preset immediately if it's its turn.
-    if (!checkGameOver()) { // Only do this if game is not over
-         startGameFlow();
+    engineContempt = preset.contempt; // Update global variable
+
+    // Inform the engine immediately of the new contempt setting
+    if (engine && engine.setOption) { // Defensive check
+        engine.setOption('Contempt', engineContempt); 
     }
+
+    // Save settings AFTER updating contempt
+    saveSettings(); 
+
+    // If it's currently the engine's turn and not human mode, make it re-evaluate
+    if (!checkGameOver() && game.turn() !== playerColor && !humanMode) {
+         requestEngineMove(true); // Re-evaluate with new preset quickly
     }
+}
 
     function updateElo(elo) {
         engineElo = elo;
@@ -1052,13 +1424,13 @@ function _applySettingsToUI(settings) {
     trainingModeToggle.checked = settings.trainingMode;
     trainingMode = settings.trainingMode;
 
-    // Engine ELO
-    engineElo = settings.elo; // Set global variable
-    eloSlider.value = settings.elo; // Update slider UI
-    updateEloLabel(settings.elo); // Update label UI
+     // Engine ELO
+    engineElo = settings.elo; // This global variable gets the ELO from loaded settings or defaults
+    eloSlider.value = settings.elo; // This sets the slider's position
+    updateEloLabel(settings.elo); // This updates the text label (Beginner, Expert, GM)
 
-    // Engine Contempt / Preset
-    engineContempt = settings.contempt; // Set global variable
+    // Engine Contempt / Preset (already covered above)
+    engineContempt = settings.contempt;
     const foundPresetKey = Object.keys(PRESETS).find(key => PRESETS[key].contempt === engineContempt);
     presetButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.preset === (foundPresetKey || 'balanced')));
     
@@ -1076,7 +1448,7 @@ function _getDefaultSettings() {
         highlightMoves: true, // Default to true
         humanMode: false,
         trainingMode: false,
-        elo: 1800, // Default ELO
+        elo: 3000, // Default ELO
         contempt: 0 // Default Contempt (balanced preset)
     };
 }

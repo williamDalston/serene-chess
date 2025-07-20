@@ -130,6 +130,17 @@
             -webkit-overflow-scrolling: touch;
         }
         
+        /* New: Enhanced move intention highlights */
+        .square.move-from-highlight {
+            box-shadow: inset 0 0 0 4px var(--accent-warm); /* Outline */
+            background-color: rgba(255, 165, 0, 0.2) !important; /* Subtle orange glow */
+            transition: box-shadow 0.1s ease-out, background-color 0.1s ease-out;
+        }
+        .square.move-to-preview {
+            background-color: rgba(139, 115, 85, 0.4) !important; /* Use possible move color */
+            transition: background-color 0.1s ease-out;
+        }
+
         .app {
             min-height: 100vh;
             min-height: 100dvh;
