@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const connectionIndicatorEl = document.getElementById('engine-indicator'); 
     const connectionStatusTextEl = document.getElementById('engine-status');
     const thinkingIndicator = document.getElementById('thinking-indicator');
+    const loadingOverlay = document.getElementById('loading-overlay'); // <-- ADD THIS LINE
     const SETTINGS_VERSION = 2; // Start with 1, increment to 2 for this change, then 3, etc.
 
     // Defensive checks
