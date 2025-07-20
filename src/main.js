@@ -449,15 +449,35 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
     }
     function handleDragEnd(e) { if (draggedPieceEl) { draggedPieceEl.classList.remove('dragging'); } draggedPieceEl = null; selectedSquare = null; }
     function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drag-over'); }
-    function handleDrop(e) {
-        e.preventDefault();
-        e.currentTarget.classList.remove('drag-over');
-        if (selectedSquare && toSquare && selectedSquare !== toSquare) {
-                    attemptMove(selectedSquare, toSquare);
-                } else {
-                    renderBoard(game.fen(), boardOrientation); // Pass boardOrientation explicitly
-                }
+function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+
+    const toSquare = e.currentTarget.dataset.square;
+
+    // IMPORTANT: Clean up the drag state like handleTouchEnd does
+    const originalPieceEl = document.querySelector(`[data-square="${selectedSquare}"] .chess-piece`);
+    if (originalPieceEl) {
+        originalPieceEl.style.opacity = '1'; // Make original piece visible again
+        originalPieceEl.style.cursor = 'grab'; // Reset cursor
     }
+
+    // Remove any cloned dragged piece if it exists (relevant if a custom drag image was created)
+    // Note: For native mouse drag, draggedPieceEl might be the original element, so removal logic might differ.
+    // However, if draggedPieceEl is ONLY set for touch, this check handles it safely.
+    if (draggedPieceEl && document.body.contains(draggedPieceEl)) {
+        document.body.removeChild(draggedPieceEl);
+        draggedPieceEl = null; // Reset for future drags
+    }
+
+    if (selectedSquare && toSquare && selectedSquare !== toSquare) {
+        attemptMove(selectedSquare, toSquare);
+    } else {
+        // Clear selected square and re-render if no valid move
+        selectedSquare = null; // << Ensure selectedSquare is cleared here too
+        renderBoard(game.fen(), boardOrientation);
+    }
+}
     function handleTouchStart(e) {
         e.preventDefault();
         if ((game.turn() !== playerColor && !humanMode)) return;
@@ -555,7 +575,8 @@ if (!draggedPieceEl) return;
 async function attemptMove(from, to) {
     const legalMove = game.moves({ square: from, verbose: true }).find(m => m.to === to);
     if (!legalMove) { 
-        // Correct renderBoard call for illegal moves
+        // Clear selection and re-render for illegal moves
+        selectedSquare = null; // << NEW: Clear selected square immediately
         renderBoard(game.fen(), boardOrientation); 
         return; 
     }
@@ -566,11 +587,16 @@ async function attemptMove(from, to) {
             moveData.promotion = await promptForPromotion(playerColor); 
         } 
         catch { 
-            // Correct renderBoard call if promotion is canceled
+            // Clear selection and re-render if promotion is canceled
+            selectedSquare = null; // << NEW: Clear selected square immediately
             renderBoard(game.fen(), boardOrientation); 
             return; 
         }
     }
+
+    // Clear the selected square before animating the move
+    // This ensures the selected square highlight disappears as the animation starts
+    selectedSquare = null; // << NEW: Clear selected square here if move is proceeding
     animateAndFinalizeMove(moveData);
 }
 
@@ -1429,11 +1455,20 @@ function _applySettingsToUI(settings) {
     eloSlider.value = settings.elo; // This sets the slider's position
     updateEloLabel(settings.elo); // This updates the text label (Beginner, Expert, GM)
 
-    // Engine Contempt / Preset (already covered above)
-    engineContempt = settings.contempt;
-    const foundPresetKey = Object.keys(PRESETS).find(key => PRESETS[key].contempt === engineContempt);
-    presetButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.preset === (foundPresetKey || 'balanced')));
-    
+// Engine Contempt / Preset
+    engineContempt = settings.contempt; // Set global variable
+
+    // Find the preset key that matches the loaded/default contempt
+    const presetToActivate = Object.keys(PRESETS).find(key => PRESETS[key].contempt === engineContempt) || 'balanced';
+
+    // --- NEW: Manually set active class, ensuring only one is active ---
+    presetButtons.forEach(btn => btn.classList.remove('active')); // First, remove 'active' from ALL buttons
+    const btnToActivate = document.querySelector(`[data-preset="${presetToActivate}"]`); // Find the correct button
+    if (btnToActivate) { // Defensive check
+        btnToActivate.classList.add('active'); // Then, add 'active' to the specific one
+    }
+    // --- END NEW ---
+      
     // Set engine options only if engine is initialized (handled in engine.onReady)
     // We already moved the engine.setOption calls to engine.onReady and applyDefaultSettingsAndSave
 }
