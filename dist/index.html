@@ -65,11 +65,15 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-        .captured-pieces { 
-            /* ... existing styles ... */
-            display: flex; /* Ensure flex for alignment */
-            align-items: center; /* Vertically align */
-            flex-wrap: wrap; /* Allow wrapping */
+        .captured-pieces {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            height: 30px; /* CHANGE: Use fixed height instead of min-height */
+            width: 100%;
+            padding: 0 var(--space-sm);
+            flex-wrap: nowrap; /* ADD: Prevents wrapping to a new line */
+            overflow: hidden; /* ADD: Hides any pieces that might overflow */
         }
         .captured-pieces img { 
             /* ... existing styles ... */
@@ -163,11 +167,12 @@
             font-size: 1rem; 
             color: var(--text-secondary); 
         }
-        .game-layout { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: var(--space-xl); 
-            justify-content: center; 
+        .game-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-xl);
+            justify-content: center;
+            align-items: flex-start; /* <-- ADD THIS LINE */
         }
         .board-container { 
             display: flex; 
@@ -1049,7 +1054,7 @@
     }
 
     </style>
-  <script type="module" crossorigin src="/assets/index-RU_ez90d.js"></script>
+  <script type="module" crossorigin src="/assets/index-C8SKfsUt.js"></script>
 </head>
 <body>
     <div class="app">
