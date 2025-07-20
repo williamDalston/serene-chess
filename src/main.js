@@ -807,43 +807,43 @@ function startDelightfulAnimation(flyingPiece, fromRect, toRect, move, result) {
     // Handles finalization of move animation and landing effects
 // Handles finalization of move animation and landing effects
 function finalizeMoveWithDelight(flyingPiece, destinationPiece, move, result, destinationSquareEl) {
-    try {
-        // Landing impact effect on the destination square
-        if (destinationSquareEl) {
-            destinationSquareEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.squareHighlightDuration}ms ease-out`;
-            destinationSquareEl.style.transform = 'scale(0.95)';
+    // try {
+    //     // Landing impact effect on the destination square
+    //     if (destinationSquareEl) {
+    //         destinationSquareEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.squareHighlightDuration}ms ease-out`;
+    //         destinationSquareEl.style.transform = 'scale(0.95)';
 
-            setTimeout(() => {
-                destinationSquareEl.style.transform = 'scale(1)';
-                setTimeout(() => {
-                    destinationSquareEl.style.transition = 'none';
-                }, ANIMATION_CONFIG.feedback.squareHighlightDuration);
-            }, 50);
-        }
+    //         setTimeout(() => {
+    //             destinationSquareEl.style.transform = 'scale(1)';
+    //             setTimeout(() => {
+    //                 destinationSquareEl.style.transition = 'none';
+    //             }, ANIMATION_CONFIG.feedback.squareHighlightDuration);
+    //         }, 50);
+    //     }
 
-        // Cleanup the temporary flying piece
-        if (flyingPiece.parentNode) {
-            document.body.removeChild(flyingPiece);
-        }
+    //     // Cleanup the temporary flying piece
+    //     if (flyingPiece.parentNode) {
+    //         document.body.removeChild(flyingPiece);
+    //     }
 
-        // Add special landing effects (e.g., check pulse, capture shake)
-        addLandingEffects(result, destinationSquareEl);
+    //     // Add special landing effects (e.g., check pulse, capture shake)
+    //     addLandingEffects(result, destinationSquareEl);
 
-        // --- THE KEY CHANGE ---
-        // Render the final board state cleanly *after* all animations are complete.
-        // This replaces the old pop-in effect and is much smoother.
-        renderBoard(game.fen(), boardOrientation);
+    //     // --- THE KEY CHANGE ---
+    //     // Render the final board state cleanly *after* all animations are complete.
+    //     // This replaces the old pop-in effect and is much smoother.
+    //     renderBoard(game.fen(), boardOrientation);
 
-        // Continue game flow after a brief satisfying pause for effects
-        setTimeout(() => {
-            updateGameAfterMove(move, result);
-        }, 50);
+    //     // Continue game flow after a brief satisfying pause for effects
+    //     setTimeout(() => {
+    //         updateGameAfterMove(move, result);
+    //     }, 50);
 
-    } catch (error) {
-        console.error('Error in finalizeMoveWithDelight:', error);
-        renderBoard(game.fen(), boardOrientation); // Still render on error
-        updateGameAfterMove(move, result); // Fallback to continue game flow
-    }
+    // } catch (error) {
+    //     console.error('Error in finalizeMoveWithDelight:', error);
+    //     renderBoard(game.fen(), boardOrientation); // Still render on error
+    //     updateGameAfterMove(move, result); // Fallback to continue game flow
+    // }
 }
 
     // Add special effects when piece lands
@@ -893,24 +893,24 @@ function finalizeMoveWithDelight(flyingPiece, destinationPiece, move, result, de
     }
 
     // Subtle board shake for captures
-    function shakeBoard() {
-        const board = document.getElementById('chessboard'); // Get the main chessboard element by ID
-        if (!board) return;
+function shakeBoard() {
+    const board = document.getElementById('chessboard');
+    if (!board) return;
 
-        // Apply shake animation using inline styles
-        board.style.transition = `transform ${ANIMATION_CONFIG.feedback.captureShakeDuration}ms ease-out`;
-        board.style.transform = 'translateX(-2px)'; // Shake left
+    // The following lines that move the board have been disabled.
+    // board.style.transition = `transform ${ANIMATION_CONFIG.feedback.captureShakeDuration}ms ease-out`;
+    // board.style.transform = 'translateX(-2px)';
 
-        setTimeout(() => {
-            board.style.transform = 'translateX(2px)'; // Shake right
-            setTimeout(() => {
-                board.style.transform = 'translateX(0)'; // Return to center
-                setTimeout(() => {
-                    board.style.transition = 'none'; // Remove transition property
-                }, ANIMATION_CONFIG.feedback.captureShakeDuration);
-            }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3); // 1/3 duration for each shake phase
-        }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3);
-    }
+    // setTimeout(() => {
+    //     board.style.transform = 'translateX(2px)';
+    //     setTimeout(() => {
+    //         board.style.transform = 'translateX(0)';
+    //         setTimeout(() => {
+    //             board.style.transition = 'none';
+    //         }, ANIMATION_CONFIG.feedback.captureShakeDuration);
+    //     }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3);
+    // }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3);
+}
 
     // Error handling with feedback (if animation fails unexpectedly)
     function restorePieceAfterError(pieceEl, flyingPiece) {
@@ -1263,74 +1263,60 @@ function toggleSettingsModal(show) {
     document.addEventListener('click', () => toggleSettingsModal(false));
 
 function updateHistory() {
-       historyEl.innerHTML = '';
-    
-        if (isMobile && !trainingMode) return; // Skip history updates on mobile unless in training mode
-        
-        
+    if (!historyEl) return;
+    historyEl.innerHTML = '';
 
-        // If the panel is currently open on mobile and content changes, adjust max-height
-        if (isMobile && !historyEl.classList.contains('collapsed')) {
-            historyEl.style.maxHeight = historyEl.scrollHeight + 'px';
-        }
-        const history = game.history({ verbose: true }); // Get verbose history
-        
-        if (history.length === 0) {
-            historyEl.innerHTML = `<div style="text-align: center; color: var(--text-tertiary); padding: var(--space-lg) 0; font-style: italic;">Game moves will appear here</div>`;
-            undoBtn.disabled = true;
-            return;
-        }
-        
-        const fragment = document.createDocumentFragment();
-        let movePairEl = null; // To hold the current move pair div
-        
-        history.forEach((move, index) => {
-            const moveNumber = Math.floor(index / 2) + 1; // 1-based move number
-            const isWhitesMove = index % 2 === 0; // True if it's White's move (0, 2, 4...)
+    if (isMobile && !trainingMode) return;
 
-            if (isWhitesMove) {
-                // If it's White's move, create a new move pair container
-                movePairEl = document.createElement('div');
-                movePairEl.classList.add('move-pair');
-                movePairEl.innerHTML = `<div class="move-number">${moveNumber}.</div>`;
-                
-                const whiteMoveSpan = document.createElement('span');
-                whiteMoveSpan.classList.add('move');
-                whiteMoveSpan.textContent = move.san;
-                movePairEl.appendChild(whiteMoveSpan);
-                
-                // Add a placeholder for black's move
-                const blackMoveSpan = document.createElement('span');
-                blackMoveSpan.classList.add('move');
-                // Don't set textContent yet, it will be added on the next iteration or left empty
-                movePairEl.appendChild(blackMoveSpan);
-                
-                fragment.appendChild(movePairEl);
-            } else {
-                // If it's Black's move, append it to the last move pair
-                if (movePairEl) { // Ensure movePairEl exists (it should if logic is followed)
-                    movePairEl.children[2].textContent = move.san; // Update the third child (black's move span)
-                }
-            }
-            
-            // Add click listener to the move pair for navigating history
-            // We need to capture the state at this point for the click handler
-            const currentMoveIndex = index; // Closure over the current index
-            if (movePairEl) { // Apply to the movePairEl just created or updated
-                 movePairEl.onclick = () => {
-                    const tempGame = new Chess();
-                    // Play moves up to and including the clicked move's index
-                    for(let i = 0; i <= currentMoveIndex; i++) {
-                        tempGame.move(history[i]);
-                    }
-                    renderBoard(tempGame.fen());
-                };
-            }
-        });
-        
-        historyEl.appendChild(fragment);
-        undoBtn.disabled = trainingMode ? history.length < 1 : history.length < 2;
+    if (isMobile && !historyEl.classList.contains('collapsed')) {
+        historyEl.style.maxHeight = historyEl.scrollHeight + 'px';
     }
+
+    const history = game.history({ verbose: true });
+
+    if (history.length === 0) {
+        historyEl.innerHTML = `<div style="text-align: center; color: var(--text-tertiary); padding: var(--space-lg) 0; font-style: italic;">Game moves will appear here</div>`;
+        undoBtn.disabled = true;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    let movePairEl = null;
+
+    history.forEach((move, index) => {
+        const moveNumber = Math.floor(index / 2) + 1;
+        const isWhitesMove = index % 2 === 0;
+
+        if (isWhitesMove) {
+            movePairEl = document.createElement('div');
+            movePairEl.classList.add('move-pair');
+            movePairEl.innerHTML = `<div class="move-number">${moveNumber}.</div>`;
+
+            const whiteMoveSpan = document.createElement('span');
+            whiteMoveSpan.classList.add('move');
+            whiteMoveSpan.textContent = move.san;
+            movePairEl.appendChild(whiteMoveSpan);
+
+            const blackMoveSpan = document.createElement('span');
+            blackMoveSpan.classList.add('move');
+            movePairEl.appendChild(blackMoveSpan);
+
+            fragment.appendChild(movePairEl);
+        } else {
+            if (movePairEl) {
+                movePairEl.children[2].textContent = move.san;
+            }
+        }
+    });
+
+    historyEl.appendChild(fragment);
+    undoBtn.disabled = trainingMode ? history.length < 1 : history.length < 2;
+
+    // --- NEW: Auto-scroll to the latest move ---
+    historyEl.scrollTop = historyEl.scrollHeight;
+}
+
+
 function updateCapturedPieces() {
         const initialPieceCounts = { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 }; // Added king for completeness, though it's not captured in standard play
 

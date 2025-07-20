@@ -1011,7 +1011,7 @@
             background-color: #2c2c2c;
         }
     </style>
-  <script type="module" crossorigin src="/assets/index-WWpAr-iV.js"></script>
+  <script type="module" crossorigin src="/assets/index-CsIXXg7o.js"></script>
 </head>
 <body>
     <div class="app">
@@ -1059,7 +1059,8 @@
                 </div>
             </div>
 
-<aside class="side-panel">
+
+        <aside class="side-panel">
     <section class="panel-section">
         <div class="toggle-group">
             <div class="toggle-info">
@@ -1085,10 +1086,10 @@
     <section class="panel-section">
         <h3 class="section-title">Engine Strength</h3>
         <div class="slider-container">
-            <input type="range" id="elo-slider" min="1200" max="3000" value="1800" step="50">
+            <input type="range" id="elo-slider" min="1200" max="3000" value="3000" step="50">
             <div class="slider-labels">
                 <span>Beginner</span>
-                <span id="elo-label-current">Expert</span>
+                <span id="elo-label-current">Grandmaster</span>
                 <span>Grandmaster</span>
             </div>
         </div>
@@ -1102,8 +1103,10 @@
         <div class="move-history collapsible-content" id="move-history" role="log" aria-live="polite" aria-label="Game moves">
         </div>
     </section>
-</aside>
-                    
+</aside>    
+
+
+            
                         <div class="move-pair">
                             <span class="move-number">1.</span>
                             <span class="move">e4</span>
@@ -1145,7 +1148,7 @@
                 <span class="toggle-slider"></span>
             </div>
         </div>
-        
+
         <div class="toggle-group">
             <div class="toggle-info">
                 <div class="toggle-label">Highlight Legal Moves</div>
@@ -1157,35 +1160,12 @@
             </div>
         </div>
 
-        <div class="toggle-group">
-            <div class="toggle-info">
-                <div class="toggle-label">Human vs Human</div>
-                <div class="toggle-description">Disable the engine for two-player games.</div>
-            </div>
-            <div class="toggle-switch">
-                <input type="checkbox" id="human-mode-toggle">
-                <span class="toggle-slider"></span>
-            </div>
-        </div>
-
-        <div class="toggle-group">
-            <div class="toggle-info">
-                <div class="toggle-label">Training Mode</div>
-                <div class="toggle-description">Analyze positions without game over.</div>
-            </div>
-            <div class="toggle-switch">
-                <input type="checkbox" id="training-mode-toggle">
-                <span class="toggle-slider"></span>
-            </div>
-        </div>
-
         <div class="button-group" style="margin-top: 24px;">
             <button type="button" class="btn" id="reset-settings">Reset</button>
             <button type="button" class="btn btn-primary" id="close-settings">Close</button>
         </div>
     </div>
 </div>
-
 
                 <div class="toggle-group">
     <label for="human-mode-toggle">Human vs Human</label>
