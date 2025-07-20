@@ -130,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBoard(game.fen(), boardOrientation); // Renders the board with default state initially
     updateLayoutForDevice(); // Adjusts layout for mobile/desktop
     updateCapturedPieces(); // Ensure captured pieces display is clear on initial load
-    initializeSettingsModal(); 
     // loadSettings(); // Load saved preferences BEFORE setting engine status
 
     // Set initial engine status (will be overwritten by engine.onReady)
