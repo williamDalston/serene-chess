@@ -1052,9 +1052,18 @@
         font-weight: 500;
         color: var(--text-primary);
     }
+        /* ADD THIS NEW RULE */
+        .board-header {
+        height: 70px; /* Reserves space for both captured pieces and status bar */
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
+    }
+
 
     </style>
-  <script type="module" crossorigin src="/assets/index-C8SKfsUt.js"></script>
+  <script type="module" crossorigin src="/assets/index-CU2GJCcV.js"></script>
 </head>
 <body>
     <div class="app">
@@ -1073,6 +1082,7 @@
                     <span class="mate-in-label" id="mate-in-label" aria-hidden="true"></span>
                 </div>
                 <div class="board-area">
+                <div class="board-header">
                     <div class="captured-pieces" id="white-captured" aria-label="White captured pieces"></div>
                     <div class="status-bar">
                 <div class="thinking-indicator" id="thinking-indicator">
@@ -1084,9 +1094,9 @@
                         <span id="engine-indicator" style="display:none"></span>
                         <span id="engine-status" style="margin-left:8px"></span>
                     </div>
-                    <div class="chessboard" id="chessboard" role="grid" aria-label="Chess board">
+                </div> <div class="chessboard" id="chessboard" role="grid" aria-label="Chess board">
                         <div class="loading-overlay" id="loading-overlay">
-                        <span class="status-text">Initializing Engine...</span>
+                        <span class="status-text">Give me a second while I load...</span>
                         </div>
                         
                         <div class="promotion-overlay" id="promotion-overlay">

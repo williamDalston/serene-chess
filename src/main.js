@@ -146,30 +146,30 @@ document.addEventListener('DOMContentLoaded', () => {
         // These values (`engineElo`, `engineContempt`) are now correctly set by `loadSettings()`.
         engine.setOption('UCI_Elo', engineElo);
         engine.setOption('Contempt', engineContempt);
+        loadingOverlay.classList.add('hidden');
         // --- END CRITICAL FIX ---
         
         connectionStatusTextEl.textContent = 'Ready'; // Engine is ready
         connectionIndicatorEl.style.backgroundColor = 'var(--success)'; // Green for ready
 
+        startNewGame();
         if (game.turn() !== playerColor && !trainingMode && !game.isGameOver()) {
             requestEngineMove(true);
         }
     };
     engine.onInfo = (info) => { if (info.score) updateEvaluationBar(info.score, game.turn()); };
     engine.onBestMove = (moveStr) => {
-    const move = game.move(moveStr, { sloppy: true });
-    if (move) {
-        playSound(move);
-        lastMove = move;
-        // THIS IS THE CHANGED LINE
-        updateBoardAfterMove(move);
-    }
-    hideThinking();
-    // renderBoard(game.fen(), boardOrientation); // This line was removed/replaced
-    updateHistory();
-    updateCapturedPieces();
-    checkGameOver();
-    updateTurnIndicator();
+        const move = game.move(moveStr, { sloppy: true });
+        if (move) {
+            playSound(move);
+            lastMove = move;
+            updateBoardAfterMove(move); // This is correct
+        }
+        hideThinking();
+        updateHistory();
+        updateCapturedPieces();
+        checkGameOver();
+        updateTurnIndicator();
     };
     engine.onError = (err) => console.error('[ENGINE ERROR]', err);
 
@@ -272,6 +272,7 @@ if (moveHistoryToggleEl) {
     // --- Game & UI Logic ---
    // --- Game & UI Logic ---
 function startNewGame() {
+        loadingOverlay.classList.remove('hidden');
         game.reset(); // Reset the chess.js game board
         lastMove = null; // Clear last move highlighting
         engine.stop(); // Stop any ongoing engine calculations
@@ -455,594 +456,127 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
     if (promotionOverlay && !boardEl.contains(promotionOverlay)) boardEl.appendChild(promotionOverlay);
     updateTurnIndicator(); // Update the visual indicator of whose turn it is
 }
+// PASTE THIS NEW BLOCK FOR DRAG AND DROP
 
-    // --- Drag, Drop, and Touch Handlers ---
+// --- Drag, Drop, and Touch Handlers ---
 
+function handleDragStart(e) {
+    // Set the data for the drag operation
+    e.dataTransfer.setData('text/plain', e.target.parentElement.dataset.square);
+    // Add a class for visual feedback
+    setTimeout(() => e.target.classList.add('dragging'), 0);
+}
 
-    function handleDragStart(e) {
-        if ((game.turn() !== playerColor && !trainingMode)) { e.preventDefault(); return; }
-        selectedSquare = e.target.parentElement.dataset.square;
-        draggedPieceEl = e.target;
-        e.dataTransfer.setData('text/plain', selectedSquare);
-        e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => { draggedPieceEl.classList.add('dragging'); }, 0);
-    }
-    function handleDragEnd(e) { if (draggedPieceEl) { draggedPieceEl.classList.remove('dragging'); } draggedPieceEl = null; selectedSquare = null; }
-    function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('drag-over'); }
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault(); // This is necessary to allow a drop
+    e.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
 function handleDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
 
+    const fromSquare = e.dataTransfer.getData('text/plain');
     const toSquare = e.currentTarget.dataset.square;
 
-    // --- FIX for removeChild: Conditionally remove draggedPieceEl from body ---
-    // Restore original piece's appearance (relevant for touch, harmless for mouse)
-    const originalPieceEl = document.querySelector(`[data-square="${selectedSquare}"] .chess-piece`);
-    if (originalPieceEl) {
-        originalPieceEl.style.opacity = '1';
-        originalPieceEl.style.cursor = 'grab';
-    }
-
-    // Only attempt to remove draggedPieceEl from body IF it was actually appended there (i.e., for touch)
-    // For native mouse drag, draggedPieceEl usually refers to the original piece, which is not in body.
-    if (draggedPieceEl && draggedPieceEl.parentNode === document.body) {
-        document.body.removeChild(draggedPieceEl);
-        draggedPieceEl = null; // Clear the reference
-    } else if (draggedPieceEl) { // If it's not a child of body, but still referenced (e.g., original piece for mouse)
-        draggedPieceEl.classList.remove('dragging'); // Just remove the 'dragging' class
-        draggedPieceEl = null; // Clear reference
-    }
-    // --- END FIX ---
-
-    if (selectedSquare && toSquare && selectedSquare !== toSquare) {
-        attemptMove(selectedSquare, toSquare);
-    } else {
-        selectedSquare = null; 
-        renderBoard(game.fen(), boardOrientation);
+    if (fromSquare && toSquare) {
+        handlePlayerMove(fromSquare, toSquare); // Call our new central move function
     }
 }
-    function handleTouchStart(e) {
-        e.preventDefault();
-        if ((game.turn() !== playerColor && !trainingMode)) return;
-        
-        clearTimeout(dragDebounceTimeout);
-        dragDebounceTimeout = setTimeout(() => {
-selectedSquare = e.target.parentElement.dataset.square;
-    
-    // --- NEW: Clone the piece for dragging ---
-    const originalPieceEl = e.target;
-    const originalSquareRect = originalPieceEl.parentElement.getBoundingClientRect();
-    
-    draggedPieceEl = originalPieceEl.cloneNode(true); // Clone the piece!
-    
-    // Set styles for the cloned dragging piece
-    Object.assign(draggedPieceEl.style, {
-        position: 'absolute',
-        zIndex: '1000',
-        pointerEvents: 'none', // Don't block events below it
-        width: `${originalPieceEl.offsetWidth}px`, // Match original's rendered width
-        height: `${originalPieceEl.offsetHeight}px`, // Match original's rendered height
-        // Start the cloned piece exactly where the original was
-        left: `${originalSquareRect.left + originalPieceEl.offsetLeft}px`,
-        top: `${originalSquareRect.top + originalPieceEl.offsetTop}px`,
-        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))', // Add a stronger shadow for "lifting" effect
-        transition: 'none', // Prevent transition effects from original
-        cursor: 'grabbing' // Indicate grabbing
-    });
 
-    document.body.appendChild(draggedPieceEl); // Append the CLONED piece to body
-    originalPieceEl.style.opacity = '0.3'; // Make original piece semi-transparent
-    originalPieceEl.style.cursor = 'grabbing'; // Change original cursor
-    // --- END NEW ---
+// PASTE THIS ENTIRE BLOCK
 
-    handleTouchMove(e); // Initial positioning
-        }, 50);
-    }
-    function handleTouchMove(e) {
-        if (!draggedPieceEl) return;
-        requestAnimationFrame(() => {
-            const touch = e.touches[0];
-            draggedPieceEl.style.left = `${touch.clientX - draggedPieceEl.offsetWidth / 2}px`; // Use clientX
-            draggedPieceEl.style.top = `${touch.clientY - draggedPieceEl.offsetHeight / 2}px`;   // Use clientY
-        });
-    }
-    function handleTouchEnd(e) {
-        clearTimeout(dragDebounceTimeout);
-if (!draggedPieceEl) return;
-    
-    const touch = e.changedTouches[0];
-    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    const toSquare = dropTarget?.classList.contains('square') ? 
-        dropTarget.dataset.square : 
-        dropTarget?.parentElement?.dataset.square;
-    
-    // Before attempting move, get the original piece element back to normal
-    const originalPieceEl = document.querySelector(`[data-square="${selectedSquare}"] .chess-piece`);
-    if (originalPieceEl) {
-        originalPieceEl.style.opacity = '1'; // Make original piece visible again
-        originalPieceEl.style.cursor = 'grab'; // Reset cursor
-    }
+// --- Move Execution ---
 
-    // Remove the cloned dragged piece from the DOM
-    if (document.body.contains(draggedPieceEl)) {
-         document.body.removeChild(draggedPieceEl);
-    }
-    draggedPieceEl = null; // Clear the reference
-
-    if (selectedSquare && toSquare && selectedSquare !== toSquare) {
-        attemptMove(selectedSquare, toSquare);
-    } else {
-        // If no valid move, or piece dropped back on same square
-        selectedSquare = null; // Clear selected square
-        renderBoard(game.fen(), boardOrientation); // Re-render to ensure board state is correct
-    }
-    // No need to remove event listeners from draggedPieceEl here as it's a clone and about to be removed.
-    // The original piece's listeners remain.
-    }
-
-    // --- Move Execution and Animation ---
-    async function onSquareClick(square) {
-        if (selectedSquare) {
-            await attemptMove(selectedSquare, square);
-            selectedSquare = null;
-            renderBoard(game.fen(), boardOrientation); // Pass boardOrientation explicitly
-        } else {
-            const piece = game.get(square);
-            if (piece && ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === game.turn()))) {
-                selectedSquare = square;
-                renderBoard(game.fen(), boardOrientation);
-            }
-        }
-    }
-
-// PASTE THIS NEW FUNCTION IN ITS PLACE
-function attemptMove(from, to) {
+// This is the new, single function that handles all player moves.
+function handlePlayerMove(from, to) {
+    // Find the move in the list of legal moves to validate it.
     const legalMove = game.moves({ square: from, verbose: true }).find(m => m.to === to);
 
     if (!legalMove) {
-        // If the move is illegal, just clear the selection and do nothing else.
-        selectedSquare = null;
-        // We don't need a full re-render here, the piece just won't move.
+        // If the move is illegal, just re-render the board once to cancel any visual selection.
+        renderBoard(game.fen(), boardOrientation);
         return;
     }
 
-    // If the move is a promotion, we'll just default to Queen for now to keep it simple.
-    // The promotion dialog can be re-integrated later.
-    const moveData = { from, to, promotion: 'q' };
-    const result = game.move(moveData);
+    // If the move is legal, apply it to the game state.
+    // We default to 'queen' for promotions to keep this fix simple.
+    const result = game.move({ from, to, promotion: 'q' });
 
     if (result) {
         playSound(result);
         lastMove = result;
-        // Instead of a full re-render, we will call our new efficient updater
-        updateBoardAfterMove(result); 
+        updateBoardAfterMove(result); // This is our new efficient updater.
 
+        // Update the rest of the UI.
         updateHistory();
         updateCapturedPieces();
         if (checkGameOver()) return;
 
-        // If training mode is off, ask the engine to move.
+        // This is the key logic: if training mode is OFF, now it's the engine's turn.
         if (!trainingMode) {
             requestEngineMove();
         }
     }
 }
 
-// ADD THIS ENTIRE NEW FUNCTION
+
+// PASTE THIS NEW FUNCTION
+
 function updateBoardAfterMove(move) {
     const fromEl = document.querySelector(`[data-square="${move.from}"]`);
     const toEl = document.querySelector(`[data-square="${move.to}"]`);
 
-    // If it was a capture, the 'to' square has a piece. We remove it.
+    // If it was a capture, the 'to' square has a piece. We remove it first.
     if (move.flags.includes('c')) {
         toEl.innerHTML = '';
     }
 
-    // Move the piece's image from the 'from' square to the 'to' square
+    // Move the piece's image element from the 'from' square to the 'to' square.
     if (fromEl && fromEl.firstChild) {
         toEl.appendChild(fromEl.firstChild);
     }
 
-    // Handle castling rook movement
-    if (move.flags.includes('k')) { // Kingside castle
+    // Manually handle the rook's movement during castling.
+    if (move.flags.includes('k')) { // Kingside
         const rookFromEl = document.querySelector(`[data-square="h${move.from[1]}"]`);
         const rookToEl = document.querySelector(`[data-square="f${move.from[1]}"]`);
         if (rookFromEl && rookFromEl.firstChild) rookToEl.appendChild(rookFromEl.firstChild);
-    } else if (move.flags.includes('q')) { // Queenside castle
+    } else if (move.flags.includes('q')) { // Queenside
         const rookFromEl = document.querySelector(`[data-square="a${move.from[1]}"]`);
         const rookToEl = document.querySelector(`[data-square="d${move.from[1]}"]`);
         if (rookFromEl && rookFromEl.firstChild) rookToEl.appendChild(rookFromEl.firstChild);
     }
 
-    // Update highlights for the last move
+    // Update the visual highlight for the last move.
     document.querySelectorAll('.last-move').forEach(el => el.classList.remove('last-move'));
     fromEl.classList.add('last-move');
     toEl.classList.add('last-move');
 }
 
-    // --- NEW: Enhanced Animations Helper Functions ---
 
-    // Add immediate visual feedback when move starts
-    function highlightMoveIntent(move) {
-        const fromSquare = document.querySelector(`[data-square="${move.from}"]`);
-        const toSquare = document.querySelector(`[data-square="${move.to}"]`);
 
-        if (fromSquare) {
-            fromSquare.classList.add('move-from-highlight');
-            setTimeout(() => fromSquare.classList.remove('move-from-highlight'), 300);
+// This function now only handles the simple click-to-move interaction.
+function onSquareClick(square) {
+    if (!selectedSquare) {
+        const piece = game.get(square);
+        // Check if it's a piece the player can move.
+        if (piece && ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === game.turn()))) {
+            selectedSquare = square;
+            renderBoard(game.fen(), boardOrientation); // Re-render to show selection.
         }
-
-        if (toSquare) {
-            toSquare.classList.add('move-to-preview');
-            setTimeout(() => toSquare.classList.remove('move-to-preview'), 150);
-        }
-    }
-
-    // Add subtle "life" animation to piece before it moves
-    function addPieceLifeAnimation(pieceEl) {
-        pieceEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.pieceLifeDuration}ms ease-out`;
-        pieceEl.style.transform = 'scale(1.05)';
-
-        setTimeout(() => {
-            pieceEl.style.transform = 'scale(1)';
-            setTimeout(() => {
-                pieceEl.style.transition = 'none';
-            }, ANIMATION_CONFIG.feedback.pieceLifeDuration);
-        }, ANIMATION_CONFIG.feedback.pieceLifeDuration);
-    }
-
-    // Create flying piece with enhanced visual effects
-    function createEnhancedFlyingPiece(originalPiece, fromRect) {
-        const flyingPiece = originalPiece.cloneNode(true);
-
-        Object.assign(flyingPiece.style, {
-            position: 'fixed', // Use 'fixed' to position relative to viewport, useful for scrolling pages
-            left: `${fromRect.left}px`,
-            top: `${fromRect.top}px`,
-            zIndex: ANIMATION_CONFIG.zIndex,
-            pointerEvents: 'none',
-            width: `${originalPiece.offsetWidth}px`,
-            height: `${originalPiece.offsetHeight}px`,
-            willChange: 'transform, filter', // Hint for browser optimization
-            transition: 'none', // Prevent inherited transitions
-            // Add subtle glow during flight and slight scale up
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
-            transform: 'scale(1.02)'
-        });
-
-        document.body.appendChild(flyingPiece);
-        return flyingPiece;
-    }
-
-    // Enhanced animation sequence with contextual easing
-// Enhanced animation sequence with contextual easing
-function startDelightfulAnimation(flyingPiece, fromRect, toRect, move, result) {
-    // --- MODIFIED: No longer re-renders the whole board ---
-    // If the move is a capture, find and hide the piece on the destination square.
-    if (result.captured) {
-        const capturedPieceEl = document.querySelector(`[data-square="${move.to}"] .chess-piece`);
-        if (capturedPieceEl) {
-            // Hide the captured piece so the flying piece can land on an empty square
-            capturedPieceEl.style.visibility = 'hidden';
-        }
-    }
-
-    // Double requestAnimationFrame for smoother start
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            const dx = toRect.left - fromRect.left;
-            const dy = toRect.top - fromRect.top;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const duration = calculateContextualDuration(distance, result);
-            const easing = selectContextualEasing(result);
-
-            const moveAnimation = flyingPiece.animate([
-                { transform: 'scale(1.02) translate(0, 0)', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' },
-                { transform: `scale(1) translate(${dx}px, ${dy}px)`, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))', offset: 0.8 },
-                { transform: `scale(0.98) translate(${dx}px, ${dy}px)`, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }
-            ], {
-                duration,
-                easing,
-                fill: 'forwards'
-            });
-
-            addMoveSpecialEffects(flyingPiece, result, duration);
-
-            moveAnimation.onfinish = () => {
-                // Pass null for newPieceEl since we aren't creating it here anymore
-                const destinationSquareEl = document.querySelector(`[data-square="${move.to}"]`);
-                finalizeMoveWithDelight(flyingPiece, null, move, result, destinationSquareEl);
-            };
-            moveAnimation.oncancel = () => {
-                console.warn('Animation cancelled');
-                const destinationSquareEl = document.querySelector(`[data-square="${move.to}"]`);
-                finalizeMoveWithDelight(flyingPiece, null, move, result, destinationSquareEl);
-            };
-        });
-    });
-}
-    // Add special visual effects during the move (e.g., capture particles, check glow)
-    function addMoveSpecialEffects(flyingPiece, result, duration) {
-        // Capture effect - add impact particles
-        if (result.captured) {
-            setTimeout(() => {
-                createCaptureParticles(flyingPiece);
-            }, duration * 0.7); // Particles appear 70% through the move
-        }
-
-        // Check effect - add warning glow to flying piece
-        if (result.san.includes('+')) {
-            flyingPiece.style.filter += ' drop-shadow(0 0 8px rgba(255, 200, 0, 0.6))'; // Yellowish glow
-        }
-
-        // Checkmate effect - dramatic glow to flying piece
-        if (result.san.includes('#')) {
-            flyingPiece.style.filter += ' drop-shadow(0 0 12px rgba(255, 50, 50, 0.8))'; // Reddish glow
-        }
-    }
-
-    // Create capture particle effect (DOM manipulation for small divs)
-    function createCaptureParticles(referenceElement) {
-        const rect = referenceElement.getBoundingClientRect();
-        const particleCount = 6; // Number of particles
-
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            // Inline styles for particle for quick creation and animation
-            particle.style.cssText = `
-                position: fixed;
-                left: ${rect.left + rect.width/2}px;
-                top: ${rect.top + rect.height/2}px;
-                width: 4px;
-                height: 4px;
-                background: radial-gradient(circle, #ff6b35, #f7931e); /* Orange/red gradient */
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: ${ANIMATION_CONFIG.zIndex + 1}; /* Above the flying piece */
-            `;
-
-            document.body.appendChild(particle);
-
-            // Randomize direction and distance for particle explosion
-            const angle = (i / particleCount) * 2 * Math.PI + (Math.random() * 0.5 - 0.25); // Spread around
-            const distance = 30 + Math.random() * 20; // Varying distances
-            const dx = Math.cos(angle) * distance;
-            const dy = Math.sin(angle) * distance;
-
-            particle.animate([
-                { transform: 'translate(0, 0) scale(1)', opacity: 1 }, // Start at piece center
-                { transform: `translate(${dx}px, ${dy}px) scale(0)`, opacity: 0 } // Fly out and fade
-            ], {
-                duration: 400, // Fast dissipation
-                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' // Smooth ease-out
-            }).onfinish = () => {
-                if (particle.parentNode) document.body.removeChild(particle); // Clean up particle element
-            };
-        }
-    }
-
-    // Calculate duration based on move distance and type
-    function calculateContextualDuration(distance, result) {
-        let baseDuration = ANIMATION_CONFIG.baseDuration + (distance * 0.3); // Base + distance-based speed
-
-        // Apply multipliers for different move types
-        if (result.captured) baseDuration *= 0.85; // Faster for captures
-        if (result.san.includes('O-O')) baseDuration *= 1.1; // Slightly slower for castling (more ceremonial)
-        if (result.san.includes('+') || result.san.includes('#')) baseDuration *= 1.05; // Slightly slower for checks/checkmates
-
-        // Clamp duration within min/max bounds
-        return Math.max(ANIMATION_CONFIG.minDuration, 
-                        Math.min(ANIMATION_CONFIG.maxDuration, baseDuration));
-    }
-
-    // Select easing curve based on move context
-    function selectContextualEasing(result) {
-        if (result.captured) return ANIMATION_CONFIG.easing.capture;
-        if (result.san.includes('O-O')) return ANIMATION_CONFIG.easing.castle;
-        if (result.san.includes('+')) return ANIMATION_CONFIG.easing.check;
-        return ANIMATION_CONFIG.easing.normal; // Default easing
-    }
-
-    // Handles finalization of move animation and landing effects
-// Handles finalization of move animation and landing effects
-function finalizeMoveWithDelight(flyingPiece, destinationPiece, move, result, destinationSquareEl) {
-    // try {
-    //     // Landing impact effect on the destination square
-    //     if (destinationSquareEl) {
-    //         destinationSquareEl.style.transition = `transform ${ANIMATION_CONFIG.feedback.squareHighlightDuration}ms ease-out`;
-    //         destinationSquareEl.style.transform = 'scale(0.95)';
-
-    //         setTimeout(() => {
-    //             destinationSquareEl.style.transform = 'scale(1)';
-    //             setTimeout(() => {
-    //                 destinationSquareEl.style.transition = 'none';
-    //             }, ANIMATION_CONFIG.feedback.squareHighlightDuration);
-    //         }, 50);
-    //     }
-
-    //     // Cleanup the temporary flying piece
-    //     if (flyingPiece.parentNode) {
-    //         document.body.removeChild(flyingPiece);
-    //     }
-
-    //     // Add special landing effects (e.g., check pulse, capture shake)
-    //     addLandingEffects(result, destinationSquareEl);
-
-    //     // --- THE KEY CHANGE ---
-    //     // Render the final board state cleanly *after* all animations are complete.
-    //     // This replaces the old pop-in effect and is much smoother.
-    //     renderBoard(game.fen(), boardOrientation);
-
-    //     // Continue game flow after a brief satisfying pause for effects
-    //     setTimeout(() => {
-    //         updateGameAfterMove(move, result);
-    //     }, 50);
-
-    // } catch (error) {
-    //     console.error('Error in finalizeMoveWithDelight:', error);
-    //     renderBoard(game.fen(), boardOrientation); // Still render on error
-    //     updateGameAfterMove(move, result); // Fallback to continue game flow
-    // }
-}
-
-    // Add special effects when piece lands
-    function addLandingEffects(result, destinationSquareEl) { // Renamed param for clarity
-        // Check warning pulse
-        if (result.san.includes('+') && !result.san.includes('#')) {
-            pulseSquare(destinationSquareEl, 'rgba(255, 200, 0, 0.3)'); // Yellow pulse for check
-        }
-
-        // Checkmate dramatic effect
-        if (result.san.includes('#')) {
-            pulseSquare(destinationSquareEl, 'rgba(255, 50, 50, 0.4)', 2); // Red pulse, twice for checkmate
-        }
-
-        // Capture satisfaction shake
-        if (result.captured) {
-            shakeBoard();
-        }
-    }
-
-    // Pulse effect for special moves (e.g., check)
-    function pulseSquare(squareEl, color, pulses = 1) { // Renamed param for clarity
-        if (!squareEl) return;
-
-        let pulseCount = 0;
-        const pulse = () => {
-            squareEl.style.boxShadow = `inset 0 0 20px ${color}`; // Inner glow
-            squareEl.style.transition = 'box-shadow 150ms ease-in-out';
-
-            setTimeout(() => {
-                squareEl.style.boxShadow = 'none'; // Turn off glow
-                pulseCount++;
-
-                if (pulseCount < pulses) {
-                    setTimeout(pulse, 150); // Repeat pulse
-                } else {
-                    // Ensure transition property is reset after all pulses are done
-                    setTimeout(() => {
-                        squareEl.style.transition = 'none';
-                        squareEl.style.boxShadow = 'none'; // Final cleanup
-                    }, 150);
-                }
-            }, 150);
-        };
-
-        pulse(); // Start the pulse
-    }
-
-    // Subtle board shake for captures
-function shakeBoard() {
-    const board = document.getElementById('chessboard');
-    if (!board) return;
-
-    // The following lines that move the board have been disabled.
-    // board.style.transition = `transform ${ANIMATION_CONFIG.feedback.captureShakeDuration}ms ease-out`;
-    // board.style.transform = 'translateX(-2px)';
-
-    // setTimeout(() => {
-    //     board.style.transform = 'translateX(2px)';
-    //     setTimeout(() => {
-    //         board.style.transform = 'translateX(0)';
-    //         setTimeout(() => {
-    //             board.style.transition = 'none';
-    //         }, ANIMATION_CONFIG.feedback.captureShakeDuration);
-    //     }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3);
-    // }, ANIMATION_CONFIG.feedback.captureShakeDuration / 3);
-}
-
-    // Error handling with feedback (if animation fails unexpectedly)
-    function restorePieceAfterError(pieceEl, flyingPiece) {
-        pieceEl.style.visibility = 'visible'; // Show original piece
-        if (flyingPiece.parentNode) { // Remove flying clone
-            document.body.removeChild(flyingPiece);
-        }
-        // Potentially add a visual cue for the user that an error occurred
-        // e.g., a quick red pulse on the from-square
-    }
-
-    // Fallback if core animation elements are missing or an error occurs during animation setup
-    function fallbackMoveWithFeedback(move) {
-        // First, apply the move to the game state
-        const result = game.move(move);
-        if (result) {
-            // No full animation, but render immediately
-            renderBoard(game.fen(), boardOrientation);
-            lastMove = result; // Ensure lastMove is updated for highlighting
-
-            // Add quick visual feedback (pulse the target square)
-            const toSquare = document.querySelector(`[data-square="${move.to}"]`);
-            if (toSquare) {
-                pulseSquare(toSquare, 'rgba(100, 200, 100, 0.3)'); // Greenish pulse for a successful fallback move
-            }
-
-            // Continue game flow
-            updateGameAfterMove(move, result);
-        }
-        return result;
-    }
-
-    // Centralized function to update game state after a move (animated or not)
-    function updateGameAfterMove(move, result) {
-        updateHistory();
-        updateCapturedPieces();
-
-        if (!checkGameOver()) {
-            startGameFlow();
-        }
-    }
-    // --- END NEW: Enhanced Animations Helper Functions ---
-
-
-// Function called when a legal move is confirmed and ready for visual execution
-function animateAndFinalizeMove(move) {
-    try {
-        // Immediate visual feedback - highlight the move intention (from/to squares)
-        highlightMoveIntent(move);
-
-        const fromEl = document.querySelector(`[data-square="${move.from}"]`);
-        const toEl = document.querySelector(`[data-square="${move.to}"]`);
-        const pieceEl = fromEl?.querySelector('.chess-piece'); // Use optional chaining for robustness
-
-        if (!fromEl || !toEl || !pieceEl) {
-            console.warn(`Animation elements missing for move ${move.from}-${move.to}. Falling back.`);
-            // If elements are missing, fall back to simple move application
-            return fallbackMoveWithFeedback(move); 
-        }
-
-        const fromRect = fromEl.getBoundingClientRect();
-        const toRect = toEl.getBoundingClientRect();
-
-        // Pre-move visual feedback (piece slightly scales up)
-        addPieceLifeAnimation(pieceEl);
-
-        // Create and append the visually moving piece (clone)
-        const flyingPiece = createEnhancedFlyingPiece(pieceEl, fromRect);
-        pieceEl.style.visibility = 'hidden'; // Hide the original piece on the board
-
-        // Update game state in chess.js
-        const result = game.move(move);
-        if (!result) { // Should ideally not happen if attemptMove already validated
-            console.error('Invalid move attempted during animation setup. Restoring piece.', move);
-            restorePieceAfterError(pieceEl, flyingPiece); // Restore if game.move fails (e.g., race condition)
-            renderBoard(game.fen(), boardOrientation); // Force re-render to correct state
-            return;
-        }
-
-        // --- FIX ADDED HERE ---
-        // Play the sound for the player's move
-        playSound(result);
-        // --------------------
-
-        // Update lastMove for highlighting after game.move() is successful
-        lastMove = result; 
-
-        // Start the delightful animation sequence
-        startDelightfulAnimation(flyingPiece, fromRect, toRect, move, result);
-
-    } catch (error) {
-        console.error('Error in animateAndFinalizeMove:', error);
-        fallbackMoveWithFeedback(move); // Fallback if any error occurs during animation setup
+    } else {
+        // If a square was already selected, attempt the move.
+        handlePlayerMove(selectedSquare, square);
+        selectedSquare = null;
     }
 }
 
@@ -1205,26 +739,34 @@ function applyPreset(presetName) {
     saveSettings(); });// Don't forget to save settings on change });
 
     // ADD THIS NEW, CORRECT LISTENER
-    trainingModeToggle.addEventListener('change', (e) => {
-        // 1. Update the game state variable
-        trainingMode = e.target.checked;
-        saveSettings(); // Save the new setting
+// PASTE THIS SINGLE, CORRECT LISTENER
+// PASTE THIS FINAL, CORRECTED LISTENER
+trainingModeToggle.addEventListener('change', (e) => {
+    trainingMode = e.target.checked;
+    saveSettings();
 
-        // 2. Visually enable or disable the engine-related controls
-        const isEngineDisabled = trainingMode; // For clarity
-        engineControls.forEach(control => {
-            control.style.opacity = isEngineDisabled ? '0.5' : '1';
-            control.style.pointerEvents = isEngineDisabled ? 'none' : 'auto';
-        });
+    // Get only the panels related to the engine
+    const enginePresetPanel = document.querySelector('[data-preset="defender"]').closest('.panel-section');
+    const engineStrengthPanel = document.getElementById('elo-slider').closest('.panel-section');
+    const enginePanels = [enginePresetPanel, engineStrengthPanel];
 
-        // 3. If we just turned the engine ON (Training Mode OFF) and it's its turn, make it move
-        if (!isEngineDisabled && game.turn() !== playerColor && !game.isGameOver()) {
-            requestEngineMove();
+    // Visually disable or enable the engine panels
+    const isEngineDisabled = trainingMode;
+    enginePanels.forEach(panel => {
+        if (panel) {
+            panel.style.opacity = isEngineDisabled ? '0.5' : '1';
+            panel.style.pointerEvents = isEngineDisabled ? 'none' : 'auto';
         }
-
-        // 4. Update the board to ensure draggable state of pieces is correct
-        renderBoard(game.fen(), boardOrientation);
     });
+
+    // If the engine was just turned ON (Training Mode OFF) and it's its turn, make it move.
+    if (!isEngineDisabled && game.turn() !== playerColor && !game.isGameOver()) {
+        requestEngineMove();
+    }
+
+    // Re-render the board to update which pieces are draggable.
+    renderBoard(game.fen(), boardOrientation);
+});
     
     // Add event listeners for auto-queen and highlight moves toggles here
     const autoQueenToggle = document.getElementById('auto-queen-toggle');
@@ -1498,63 +1040,35 @@ function hideThinking() {
     }
 
 // Helper to apply settings to UI and variables. Does NOT interact with localStorage directly.
+// PASTE THIS CORRECTED VERSION
 function _applySettingsToUI(settings) {
     // Dark Mode
-    if (settings.darkMode) {
-        document.body.classList.add('dark-mode');
-        darkModeToggle.checked = true;
-    } else {
-        document.body.classList.remove('dark-mode');
-        darkModeToggle.checked = false;
-    }
+    document.body.classList.toggle('dark-mode', settings.darkMode);
+    darkModeToggle.checked = settings.darkMode;
 
     // Sound
     soundToggle.checked = settings.soundEnabled;
     soundEnabled = settings.soundEnabled;
 
-    // Auto-Queen
-    const autoQueenToggle = document.getElementById('auto-queen-toggle');
-    if (autoQueenToggle) autoQueenToggle.checked = settings.autoQueen;
-
     // Highlight Moves
     const highlightMovesToggle = document.getElementById('highlight-moves-toggle');
     if (highlightMovesToggle) highlightMovesToggle.checked = settings.highlightMoves;
 
-    // Human vs Human Mode
-    trainingMode = (settings.trainingMode === true);
-    trainingMode.checked = trainingMode;
-    engineControls.forEach(control => control.style.opacity = trainingMode ? '0.5' : '1');
-    engineControls.forEach(control => control.style.pointerEvents = trainingMode ? 'none' : 'auto');
-    if (trainingMode) { // If human mode is enabled, stop engine thinking and clear indicator
-        engine.stop();
-        hideThinking();
-    }
-
-    // Training Mode
-    trainingModeToggle.checked = settings.trainingMode;
+    // Training Mode (Single, clear source of truth)
     trainingMode = settings.trainingMode;
+    trainingModeToggle.checked = settings.trainingMode;
 
-     // Engine ELO
-    engineElo = settings.elo; // This global variable gets the ELO from loaded settings or defaults
-    eloSlider.value = settings.elo; // This sets the slider's position
-    updateEloLabel(settings.elo); // This updates the text label (Beginner, Expert, GM)
+    // Engine ELO
+    engineElo = settings.elo;
+    eloSlider.value = settings.elo;
+    updateEloLabel(settings.elo);
 
-// Engine Contempt / Preset
-    engineContempt = settings.contempt; // Set global variable
-
-    // Find the preset key that matches the loaded/default contempt
+    // Engine Contempt / Preset
+    engineContempt = settings.contempt;
     const presetToActivate = Object.keys(PRESETS).find(key => PRESETS[key].contempt === engineContempt) || 'balanced';
-
-    // --- NEW: Manually set active class, ensuring only one is active ---
-    presetButtons.forEach(btn => btn.classList.remove('active')); // First, remove 'active' from ALL buttons
-    const btnToActivate = document.querySelector(`[data-preset="${presetToActivate}"]`); // Find the correct button
-    if (btnToActivate) { // Defensive check
-        btnToActivate.classList.add('active'); // Then, add 'active' to the specific one
-    }
-    // --- END NEW ---
-      
-    // Set engine options only if engine is initialized (handled in engine.onReady)
-    // We already moved the engine.setOption calls to engine.onReady and applyDefaultSettingsAndSave
+    presetButtons.forEach(btn => btn.classList.remove('active'));
+    const btnToActivate = document.querySelector(`[data-preset="${presetToActivate}"]`);
+    if (btnToActivate) btnToActivate.classList.add('active');
 }
 
 // Helper to get default settings
@@ -1563,11 +1077,11 @@ function _getDefaultSettings() {
         version: SETTINGS_VERSION,
         darkMode: false,
         soundEnabled: false,
-        autoQueen: true,
+        autoQueen: false,
         highlightMoves: true, // Default to true
         trainingMode: false,
         elo: 3000, // Default ELO
-        contempt: 100 // Default Contempt (balanced preset)
+        contempt: 50 // Default Contempt (balanced preset)
     };
 }
 
@@ -1579,7 +1093,6 @@ function saveSettings() {
         soundEnabled: soundToggle.checked,
         autoQueen: document.getElementById('auto-queen-toggle')?.checked || false, // Use optional chaining + fallback
         highlightMoves: document.getElementById('highlight-moves-toggle')?.checked || false,
-        trainingMode: trainingMode.checked,
         trainingMode: trainingModeToggle.checked,
         elo: eloSlider.value,
         contempt: engineContempt
