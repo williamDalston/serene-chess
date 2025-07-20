@@ -1198,42 +1198,54 @@
     }
 
 /* Ensure your modal CSS matches this block */
-
+/* Modal backdrop */
 .settings-backdrop {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(26, 25, 21, 0.7);
-    backdrop-filter: blur(4px);
-    z-index: 299;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Hidden by default */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,25,21,0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 299;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }
-
 .settings-backdrop.visible {
-    /* Made visible by JavaScript */
-    opacity: 1;
-    visibility: visible;
+  opacity: 1;
+  visibility: visible;
 }
 
+/* Modal container */
 .settings-modal {
-    /* Starts scaled down and invisible */
-    display: none;
-    transform: scale(0.95) translateY(10px);
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+  background: var(--surface);
+  box-shadow: var(--shadow-elevated);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  width: min(90vw, 400px);    /* up to 400px, but at most 90% viewport width */
+  max-width: 100%;            /* never overflow horizontally */
+  max-height: 80vh;           /* stay within 80% of viewport height */
+  overflow-y: auto;           /* scroll if content exceeds max-height */
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .settings-backdrop.visible .settings-modal {
-    display: block; /* Becomes visible when the backdrop has the .visible class */
-    transform: scale(1) translateY(0);
-    opacity: 1;
-    pointer-events: auto;
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
 }
+
+
+/* Optional tweak for very large screens */
+@media (min-width: 1200px) {
+  .settings-modal {
+    width: 400px;           /* fixed comfortable width on big screens */
+  }
+}
+
 
     </style>
 </head>
