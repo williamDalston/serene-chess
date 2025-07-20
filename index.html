@@ -450,10 +450,6 @@
         .btn-primary { background: var(--accent-warm); color: white; border-color: var(--accent-warm); }
         .btn-primary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent-soft); }
         
-/* Find and replace the .move-history CSS block */
-.settings-modal { pointer-events:none }
-.settings-backdrop.visible .settings-modal { pointer-events:auto }
-
 
 .move-history {
     max-height: 250px;
@@ -702,16 +698,6 @@
             transform: translateX(16px); 
         }
         
-        .settings-modal { 
-            position: fixed; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            z-index: 300; 
-            display: block; 
-            width: 90%; 
-            max-width: 320px; 
-        }
         
         .settings-icon { 
             font-size: 1.5rem; 
@@ -755,26 +741,6 @@
             100% { opacity: 1; }
         }
 
-        /* --- NEW: Enhanced Settings Modal Styles --- */
-        .settings-modal .toggle-group {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px;
-            margin-bottom: 12px;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-md);
-            border: var(--border-soft);
-            box-shadow: var(--shadow-gentle);
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .settings-modal .toggle-group:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-elevated);
-            border-color: var(--accent-light);
-        }
 
         /* --- Styling Enhancements --- */
 
@@ -1008,10 +974,6 @@
                 gap: var(--space-sm);
             }
             
-            .settings-modal { 
-                width: 95%;
-                max-width: none;
-            }
             
             .chess-piece { 
                 width: 95%; 
@@ -1205,60 +1167,55 @@
 
 /* Ensure your modal CSS matches this block */
 /* hide by default */
-.settings-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(26,25,21,0.7);
-  backdrop-filter: blur(4px);
-  display: none;
-  align-items: center; justify-content: center;
-  z-index: 999;
-}
-.settings-backdrop.visible {
-  display: flex;
+
+
+/* =======================================
+   SETTINGS MODAL — final centering fix
+   ======================================= */
+.settings-backdrop{
+  position:fixed;            /* fill viewport */
+  inset:0;
+  display:none;              /* shown via “.visible” */
+  align-items:center;        /* flex centring */
+  justify-content:center;
+  background:rgba(26,25,21,.72);
+  backdrop-filter:blur(4px);
+  z-index:999;
 }
 
+.settings-backdrop.visible{ display:flex; }
+
+/* modal card */
 .settings-modal{
-  /* size & appearance */
   background:var(--surface);
   border-radius:var(--radius-lg);
   box-shadow:var(--shadow-elevated);
   padding:var(--space-lg);
-  width:min(90vw,400px);       /* 400 px on desktop, 90 vw on phones */
+
+  /* 280 px on tiny phones → 400 px on desktop */
+  width:clamp(280px,90vw,400px);
   max-height:80vh;
   overflow-y:auto;
-  
+
   /* entrance animation */
   opacity:0;
   transform:scale(.9);
   transition:opacity .25s ease, transform .25s ease;
 
-  /* while hidden it shouldn’t block clicks */
-  pointer-events:none;
+  pointer-events:none;       /* block clicks while hidden */
 }
-.settings-backdrop{
-  position:fixed;
-  inset:0;
-  display:none;                /* shown only when .visible is added */
-  align-items:center;          /* flex‑box centering */
-  justify-content:center;
-  background:rgba(26,25,21,.7);
-  backdrop-filter:blur(4px);
-  z-index:999;
-}
-
-/* When backdrop is visible → modal fades / scales in */
 .settings-backdrop.visible .settings-modal{
   opacity:1;
   transform:scale(1);
   pointer-events:auto;
 }
 
-/* Optional tweak for very large screens */
-@media (min-width: 1200px) {
-  .settings-modal {
-    width: 400px;           /* fixed comfortable width on big screens */
-  }
+/* Give the card a bit more breathing room on ultra‑short screens (e.g. landscape phones) */
+@media (max-height:560px){
+  .settings-modal{max-height:calc(100vh - 2*var(--space-sm));}
 }
+
+
 
 
     </style>
