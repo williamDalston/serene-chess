@@ -1212,22 +1212,20 @@ function applyPreset(presetName) {
         saveSettings(); // Add this line
     });
 
-// --- Force Toggle Interaction for Mobile Devices ---
-// This makes the entire toggle row clickable, which is more reliable on iOS.
-document.querySelectorAll('.toggle-group').forEach(group => {
+// REPLACE the old "Force Toggle" block with this one
+// --- Enhanced Toggle Interaction for Mobile ---
+document.querySelectorAll('.settings-modal .toggle-group').forEach(group => {
     group.addEventListener('click', (e) => {
-        // Don't interfere with the reset/close buttons if they're in a similar container
-        if (e.target.tagName === 'BUTTON') return;
-
         const input = group.querySelector('input[type="checkbox"]');
-        if (input) {
-            // Manually flip the checked state
-            input.checked = !input.checked;
-
-            // IMPORTANT: Manually trigger the 'change' event
-            // so that your other listeners (for sound, dark mode, etc.) will run.
-            input.dispatchEvent(new Event('change', { 'bubbles': true }));
+        
+        // If the click is on a button or the input itself, let the browser handle it.
+        if (!input || e.target.tagName === 'BUTTON' || e.target === input) {
+            return;
         }
+
+        // Otherwise, manually flip the state and trigger the 'change' event.
+        input.checked = !input.checked;
+        input.dispatchEvent(new Event('change', { 'bubbles': true }));
     });
 });
 // --- Settings Modal Logic (replaces the three old listeners) ---
