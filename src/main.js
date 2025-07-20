@@ -444,11 +444,12 @@ function renderBoard(fen = game.fen(), desiredOrientation = boardOrientation) { 
                 pieceImg.classList.add('chess-piece');
                 
                 // Make pieces draggable only for the current human player or in human vs human mode
-            if ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === tempGame.turn())) {
-                // Add our new universal drag listeners for both mouse and touch
-                pieceImg.addEventListener('mousedown', dragStart);
-                pieceImg.addEventListener('touchstart', dragStart, { passive: false });
-            }
+                // New: if trainingMode is on, allow dragging of any piece
+                if (trainingMode || piece.color === playerColor) {
+                    pieceImg.addEventListener('mousedown', dragStart);
+                    pieceImg.addEventListener('touchstart', dragStart, { passive: false });
+                }
+
                 squareEl.appendChild(pieceImg);
             }
             boardEl.appendChild(squareEl); // Add the square to the chessboard
@@ -638,7 +639,9 @@ function onSquareClick(square) {
     clearHighlights(); // Clear any previous selection
 
     const piece = game.get(square);
-    const canMove = (piece && ((piece.color === playerColor && !trainingMode) || (trainingMode && piece.color === game.turn())));
+   // New: allow selecting any piece in trainingMode
+const canMove = piece && (trainingMode || piece.color === playerColor);
+
 
     if (canMove) {
         selectedSquare = square;
